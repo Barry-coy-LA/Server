@@ -367,7 +367,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -508,6 +508,38 @@
             0%, 100% { opacity: 0.3; }
             50% { opacity: 1; }
         }
+
+        /* 新增：审批系统特殊样式 */
+        .approval-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: newFeature 2s ease-in-out infinite;
+        }
+
+        @keyframes newFeature {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .email-icon {
+            display: inline-block;
+            margin-left: 0.5rem;
+            animation: emailPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes emailPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
     </style>
 </head>
 <body>
@@ -544,7 +576,7 @@
             <h1 class="hero-title">INDUSTRIAL AGI LAB</h1>
             <p class="hero-subtitle">NEXT-GEN MANUFACTURING INTELLIGENCE PLATFORM</p>
             <p class="hero-description">
-                先进的工业级人工智能试验台，集成OCR识别、计算机视觉、智能分析于一体。
+                先进的工业级人工智能试验台，集成OCR识别、计算机视觉、智能分析、实验审批于一体。
                 专为工业制造环境设计，支持上位机数据交互，提供实时监控和智能决策支持。
                 构建未来智能工厂的核心大脑系统。
             </p>
@@ -625,6 +657,33 @@
                 </ul>
             </div>
 
+            <!-- 新增：实验审批系统模块 -->
+            <div class="module-card" onclick="showApprovalDemo()">
+                <div class="approval-badge">NEW</div>
+                <div class="module-header">
+                    <span class="module-icon">📋</span>
+                    <div>
+                        <h3 class="module-title">EXPERIMENT APPROVAL SYSTEM</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: OPERATIONAL</span>
+                            <span class="data-indicator"></span>
+                            <span class="email-icon">📧</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    局域网邮件审批系统，实现实验报告的智能化审批流程。支持PDF自动生成、邮件发送、安全验证等功能。
+                </p>
+                <ul class="module-features">
+                    <li>PDF报告自动生成</li>
+                    <li>邮件审批流程</li>
+                    <li>局域网安全验证</li>
+                    <li>审批记录追溯</li>
+                    <li>一次性Token机制</li>
+                    <li>上位机API接口</li>
+                </ul>
+            </div>
+
             <div class="module-card" onclick="showHostInterface()">
                 <div class="module-header">
                     <span class="module-icon">🔗</span>
@@ -677,6 +736,15 @@
                 <div class="monitor-value" id="memoryUsage">-</div>
                 <div class="monitor-label">Memory Usage</div>
             </div>
+            <!-- 新增：审批系统监控 -->
+            <div class="monitor-item">
+                <div class="monitor-value" id="pendingApprovals">-</div>
+                <div class="monitor-label">Pending Approvals</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="approvalRate">-</div>
+                <div class="monitor-label">Approval Rate</div>
+            </div>
         </div>
     </section>
 
@@ -686,7 +754,8 @@
         <p style="margin-top: 0.5rem; color: var(--text-dim);">
             <a href="/docs" style="color: var(--primary-green); text-decoration: none;">API DOCS</a> | 
             <a href="/admin/login" style="color: var(--primary-green); text-decoration: none;">CONTROL CENTER</a> | 
-            <a href="/health" style="color: var(--primary-green); text-decoration: none;">SYSTEM HEALTH</a>
+            <a href="/health" style="color: var(--primary-green); text-decoration: none;">SYSTEM HEALTH</a> |
+            <a href="/approval/test" style="color: var(--primary-green); text-decoration: none;">APPROVAL SYSTEM</a>
         </p>
     </footer>
 
@@ -753,6 +822,22 @@
                     document.getElementById('memoryUsage').textContent = (system.memory_percent || 0).toFixed(1) + '%';
                 }
 
+                // 新增：审批系统统计
+                const approvalResponse = await fetch('/api/approval-stats');
+                if (approvalResponse.ok) {
+                    const approvalStats = await approvalResponse.json();
+                    document.getElementById('pendingApprovals').textContent = (approvalStats.pending_approvals || 0).toString();
+                    
+                    const totalReports = approvalStats.total_reports || 0;
+                    const approvedReports = approvalStats.approved_reports || 0;
+                    const approvalRate = totalReports > 0 ? ((approvedReports / totalReports) * 100).toFixed(1) : '100.0';
+                    document.getElementById('approvalRate').textContent = approvalRate + '%';
+                } else {
+                    // 如果审批系统未加载，显示默认值
+                    document.getElementById('pendingApprovals').textContent = '0';
+                    document.getElementById('approvalRate').textContent = '100%';
+                }
+
             } catch (error) {
                 console.error('监控数据加载失败:', error);
                 document.getElementById('systemStatus').textContent = 'SYSTEM OFFLINE';
@@ -772,6 +857,151 @@
         // 显示上位机接口信息
         function showHostInterface() {
             alert(`上位机接口模块\n\n支持协议:\n• Modbus TCP/IP\n• OPC UA\n• HTTP/HTTPS API\n• WebSocket实时通信\n\n数据格式:\n• JSON\n• XML\n• Binary\n\n状态: 待连接`);
+        }
+
+        // 新增：显示审批系统演示
+        function showApprovalDemo() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                animation: fadeIn 0.3s ease-out;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #1a2f1a 0%, #0a0f0a 100%);
+                    border: 2px solid #00ff41;
+                    border-radius: 16px;
+                    padding: 40px;
+                    max-width: 600px;
+                    width: 90%;
+                    color: #e0ffe0;
+                    font-family: 'Courier New', monospace;
+                    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+                    position: relative;
+                ">
+                    <button onclick="this.closest('div').parentElement.remove()" style="
+                        position: absolute;
+                        top: 15px;
+                        right: 20px;
+                        background: none;
+                        border: none;
+                        color: #00ff41;
+                        font-size: 24px;
+                        cursor: pointer;
+                        padding: 5px;
+                    ">✕</button>
+                    
+                    <h2 style="
+                        color: #00ff41;
+                        text-align: center;
+                        margin-bottom: 25px;
+                        font-size: 24px;
+                        text-shadow: 0 0 10px #00ff41;
+                    ">📋 实验审批系统</h2>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #00cc33; margin-bottom: 10px;">🔧 主要功能</h3>
+                        <ul style="line-height: 1.6; padding-left: 20px;">
+                            <li><strong>PDF报告生成:</strong> 自动生成带水印的实验报告</li>
+                            <li><strong>邮件审批流程:</strong> 发送包含审批按钮的HTML邮件</li>
+                            <li><strong>局域网安全:</strong> 仅限内网访问，IP地址验证</li>
+                            <li><strong>一次性Token:</strong> 30分钟有效期，使用后失效</li>
+                            <li><strong>审批记录:</strong> 完整的操作日志和审计追踪</li>
+                            <li><strong>上位机集成:</strong> C#/.NET API接口支持</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #00cc33; margin-bottom: 10px;">🔌 API接口</h3>
+                        <div style="background: rgba(0, 255, 65, 0.1); padding: 15px; border-radius: 8px; font-size: 12px;">
+                            <strong>提交审批:</strong> POST /approval/submit_report<br>
+                            <strong>查询状态:</strong> GET /approval/status/{report_id}<br>
+                            <strong>系统测试:</strong> GET /approval/test<br>
+                            <strong>审批统计:</strong> GET /api/approval-stats
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <h3 style="color: #00cc33; margin-bottom: 10px;">🛡️ 安全特性</h3>
+                        <ul style="line-height: 1.6; padding-left: 20px; font-size: 14px;">
+                            <li>仅限192.168.x.x等内网IP访问</li>
+                            <li>审批链接包含唯一UUID Token</li>
+                            <li>操作前强制二次确认</li>
+                            <li>记录IP、时间、用户代理等信息</li>
+                            <li>驳回必须填写详细原因</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="/docs#/实验审批系统" target="_blank" style="
+                            display: inline-block;
+                            padding: 12px 24px;
+                            background: linear-gradient(45deg, #003d10, #00cc33);
+                            color: #e0ffe0;
+                            text-decoration: none;
+                            border: 2px solid #00ff41;
+                            border-radius: 6px;
+                            font-weight: bold;
+                            margin: 0 10px;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(0,255,65,0.3)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                            📚 查看API文档
+                        </a>
+                        <a href="/approval/test" target="_blank" style="
+                            display: inline-block;
+                            padding: 12px 24px;
+                            background: transparent;
+                            color: #00ff41;
+                            text-decoration: none;
+                            border: 2px solid #00ff41;
+                            border-radius: 6px;
+                            font-weight: bold;
+                            margin: 0 10px;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(0,255,65,0.1)'" onmouseout="this.style.background='transparent'">
+                            🧪 系统测试
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // 添加淡入动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+
+            // ESC键关闭
+            const handleEsc = function(e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
         }
 
         // 平滑滚动
@@ -818,6 +1048,14 @@
                     value.style.opacity = '1';
                 });
             }, 2000);
+
+            // 新增：显示审批系统加载提示
+            setTimeout(() => {
+                const approvalCard = document.querySelector('.module-card:nth-child(4)');
+                if (approvalCard) {
+                    approvalCard.style.animation = 'newFeatureHighlight 3s ease-in-out';
+                }
+            }, 3000);
         });
 
         // 窗口大小改变时重新创建粒子
@@ -835,7 +1073,9 @@
                 'responseTime',
                 'dataVolume',
                 'cpuUsage',
-                'memoryUsage'
+                'memoryUsage',
+                'pendingApprovals',
+                'approvalRate'
             ];
             
             updateElements.forEach(id => {
@@ -855,6 +1095,58 @@
 
         // 每5秒模拟数据更新闪烁
         setInterval(simulateDataUpdate, 5000);
+
+        // 新增：审批系统特殊动画
+        const newFeatureStyle = document.createElement('style');
+        newFeatureStyle.textContent = `
+            @keyframes newFeatureHighlight {
+                0%, 100% { 
+                    transform: translateY(0);
+                    box-shadow: 0 10px 30px var(--glow-green);
+                }
+                25% { 
+                    transform: translateY(-8px);
+                    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
+                }
+                50% { 
+                    transform: translateY(-5px);
+                    box-shadow: 0 20px 50px rgba(0, 255, 65, 0.5);
+                }
+                75% { 
+                    transform: translateY(-8px);
+                    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
+                }
+            }
+        `;
+        document.head.appendChild(newFeatureStyle);
+
+        // 检测审批系统状态
+        async function checkApprovalSystemStatus() {
+            try {
+                const response = await fetch('/approval/test');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ 审批系统状态:', data.status);
+                    
+                    // 更新状态显示
+                    const approvalCard = document.querySelector('.module-card:nth-child(4) .module-status .console-text');
+                    if (approvalCard && data.status === 'OPERATIONAL') {
+                        approvalCard.textContent = 'STATUS: OPERATIONAL';
+                    }
+                } else {
+                    console.warn('⚠️ 审批系统未响应');
+                    const approvalCard = document.querySelector('.module-card:nth-child(4) .module-status .console-text');
+                    if (approvalCard) {
+                        approvalCard.textContent = 'STATUS: OFFLINE';
+                    }
+                }
+            } catch (error) {
+                console.error('❌ 审批系统检查失败:', error);
+            }
+        }
+
+        // 页面加载后检查审批系统状态
+        setTimeout(checkApprovalSystemStatus, 2000);
     </script>
 </body>
 </html>

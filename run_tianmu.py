@@ -120,12 +120,7 @@ def start_server():
     try:
         print("🚀 正在启动服务器...")
         cmd = [
-            sys.executable, "-m", "uvicorn",
-            "app.main:app",
-            "--host", "127.0.0.1",
-            "--port", "8000",
-            "--reload",
-            "--log-level", "info"
+            sys.executable,"app/main.py"
         ]
         
         # 启动服务器

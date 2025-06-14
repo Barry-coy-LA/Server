@@ -1,0 +1,723 @@
+<!-- app/templates/approval_reject_confirm.html - 驳回确认页面（带原因输入） -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>确认驳回审批 - TianMu审批系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 700px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            font-size: 4rem;
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 20px;
+            animation: shake 1s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .report-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            border: 2px solid #dee2e6;
+        }
+
+        .info-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 100px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-label::before {
+            content: "▶";
+            color: #dc3545;
+            font-size: 12px;
+        }
+
+        .info-value {
+            color: #333;
+            flex: 1;
+            text-align: right;
+            word-break: break-word;
+            font-weight: 500;
+        }
+
+        .form-section {
+            margin: 30px 0;
+        }
+
+        .form-group {
+            margin: 25px 0;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .required {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px 18px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #dc3545;
+            box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1);
+            background: #fefefe;
+        }
+
+        .form-control.valid {
+            border-color: #28a745;
+            box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+        }
+
+        .form-control.invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.15);
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .char-counter {
+            font-size: 11px;
+            color: #999;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .char-counter.warning {
+            color: #ffc107;
+        }
+
+        .char-counter.error {
+            color: #dc3545;
+        }
+
+        .char-counter.success {
+            color: #28a745;
+        }
+
+        .reason-tips {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #2196f3;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 6px solid #1976d2;
+        }
+
+        .reason-tips h4 {
+            color: #1976d2;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .reason-tips ul {
+            color: #1976d2;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .reason-tips li {
+            margin-bottom: 4px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            min-width: 160px;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-reject {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-reject:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-reject:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
+        .warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 6px solid #ff8f00;
+        }
+
+        .warning h3 {
+            color: #856404;
+            margin-bottom: 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning ul {
+            color: #856404;
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+
+        .warning li {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            margin-top: 35px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #dc3545;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .info-value {
+                text-align: left;
+            }
+
+            .title {
+                font-size: 24px;
+            }
+        }
+
+        /* 预设驳回原因选择 */
+        .preset-reasons {
+            margin: 15px 0;
+        }
+
+        .preset-reasons h4 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .reason-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .reason-chip {
+            background: #e9ecef;
+            color: #495057;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .reason-chip:hover {
+            background: #dc3545;
+            color: white;
+            border-color: #c82333;
+        }
+
+        .reason-chip.selected {
+            background: #dc3545;
+            color: white;
+            border-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">❌</div>
+        
+        <h1 class="title">确认驳回审批</h1>
+        <p class="subtitle">请填写详细的驳回原因，以便操作员了解需要改进的地方</p>
+        
+        <div class="report-info">
+            <div class="info-header">📋 待驳回报告信息</div>
+            
+            <div class="info-row">
+                <span class="info-label">报告编号</span>
+                <span class="info-value"><strong>{{ approval.report_id }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">报告标题</span>
+                <span class="info-value">{{ approval.title }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">操作员</span>
+                <span class="info-value">{{ approval.operator }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">提交时间</span>
+                <span class="info-value">{{ approval.created_at.strftime('%Y年%m月%d日 %H:%M:%S') }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">审批人</span>
+                <span class="info-value">{{ approval.approver_email }}</span>
+            </div>
+        </div>
+
+        <form method="POST" action="/approval/reject" id="rejectForm">
+            <input type="hidden" name="token" value="{{ token }}">
+            
+            <div class="form-section">
+                <div class="preset-reasons">
+                    <h4>💡 常用驳回原因（点击快速选择）</h4>
+                    <div class="reason-chips">
+                        <span class="reason-chip" data-reason="实验数据不完整，请补充相关测试数据">数据不完整</span>
+                        <span class="reason-chip" data-reason="报告格式不规范，请按照标准模板重新整理">格式不规范</span>
+                        <span class="reason-chip" data-reason="缺少必要的安全评估和风险分析">缺少安全评估</span>
+                        <span class="reason-chip" data-reason="实验结论不明确，需要进一步分析">结论不明确</span>
+                        <span class="reason-chip" data-reason="参考文献和标准引用不准确">引用不准确</span>
+                        <span class="reason-chip" data-reason="实验过程描述不够详细">过程描述不详</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="reason">
+                        驳回原因 <span class="required">*</span>
+                    </label>
+                    <textarea 
+                        id="reason" 
+                        name="reason" 
+                        class="form-control" 
+                        placeholder="请详细说明驳回的具体原因，以便操作员进行针对性改进。建议包括：&#10;1. 具体存在的问题&#10;2. 需要补充或修改的内容&#10;3. 改进建议和参考标准&#10;4. 重新提交的要求" 
+                        required
+                        maxlength="1000"
+                    ></textarea>
+                    <div class="char-counter" id="charCounter">0 / 1000 字符</div>
+                    <div class="form-help">
+                        请具体说明需要修改或补充的内容，帮助操作员快速定位问题。建议至少填写20个字符。
+                    </div>
+                </div>
+
+                <div class="reason-tips">
+                    <h4>💼 优质驳回原因示例</h4>
+                    <ul>
+                        <li><strong>具体问题：</strong>"实验数据表格中第3-5行的温度读数异常，需要重新测量"</li>
+                        <li><strong>改进建议：</strong>"建议增加对照组实验，并补充误差分析章节"</li>
+                        <li><strong>标准要求：</strong>"根据GB/T xxx标准，需要补充设备校准证书"</li>
+                        <li><strong>格式要求：</strong>"图表编号不规范，请按照公司模板重新编排"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="warning">
+                <h3>⚠️ 驳回操作提醒</h3>
+                <ul>
+                    <li><strong>驳回后报告将返回给操作员重新处理</strong></li>
+                    <li>请提供具体、明确、可操作的修改建议</li>
+                    <li>此操作不可撤销，驳回原因将被永久记录</li>
+                    <li>操作员将收到包含驳回原因的详细通知</li>
+                    <li>您的审批决定将记录IP地址和操作时间用于审计</li>
+                </ul>
+            </div>
+
+            <div class="buttons">
+                <button type="submit" class="btn btn-reject" id="submitBtn" disabled>
+                    ❌ 确认驳回报告
+                </button>
+                <a href="javascript:history.back()" class="btn btn-cancel">
+                    🔙 取消操作
+                </a>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在提交驳回原因，请稍候...</p>
+            </div>
+        </form>
+
+        <div class="footer">
+            <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
+            <p>本页面仅在局域网内有效 · 请确保在安全的网络环境中操作</p>
+            <p>驳回时间：{{ moment().format('YYYY年MM月DD日 HH:mm:ss') }}</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('rejectForm');
+            const reasonTextarea = document.getElementById('reason');
+            const submitBtn = document.getElementById('submitBtn');
+            const charCounter = document.getElementById('charCounter');
+            const loading = document.getElementById('loading');
+            const reasonChips = document.querySelectorAll('.reason-chip');
+
+            // 字符计数和验证
+            function updateCharCount() {
+                const length = reasonTextarea.value.length;
+                charCounter.textContent = `${length} / 1000 字符`;
+                
+                // 更新样式
+                if (length < 20) {
+                    charCounter.className = 'char-counter error';
+                    reasonTextarea.className = 'form-control invalid';
+                    submitBtn.disabled = true;
+                } else if (length < 50) {
+                    charCounter.className = 'char-counter warning';
+                    reasonTextarea.className = 'form-control';
+                    submitBtn.disabled = false;
+                } else {
+                    charCounter.className = 'char-counter success';
+                    reasonTextarea.className = 'form-control valid';
+                    submitBtn.disabled = false;
+                }
+            }
+
+            // 监听输入变化
+            reasonTextarea.addEventListener('input', updateCharCount);
+            reasonTextarea.addEventListener('paste', function() {
+                setTimeout(updateCharCount, 10);
+            });
+
+            // 预设原因选择
+            reasonChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    const reason = this.getAttribute('data-reason');
+                    const currentValue = reasonTextarea.value.trim();
+                    
+                    // 切换选中状态
+                    this.classList.toggle('selected');
+                    
+                    if (this.classList.contains('selected')) {
+                        // 添加原因
+                        if (currentValue) {
+                            reasonTextarea.value = currentValue + '\n\n' + reason;
+                        } else {
+                            reasonTextarea.value = reason;
+                        }
+                    } else {
+                        // 移除原因
+                        reasonTextarea.value = currentValue.replace(reason, '').replace(/\n\n\n+/g, '\n\n').trim();
+                    }
+                    
+                    updateCharCount();
+                    reasonTextarea.focus();
+                });
+            });
+
+            // 表单提交验证
+            form.addEventListener('submit', function(e) {
+                const reason = reasonTextarea.value.trim();
+                
+                if (reason.length < 20) {
+                    e.preventDefault();
+                    alert('请填写详细的驳回原因（至少20个字符），以便操作员了解具体问题。');
+                    reasonTextarea.focus();
+                    return false;
+                }
+
+                if (reason.length > 1000) {
+                    e.preventDefault();
+                    alert('驳回原因过长，请控制在1000字符以内。');
+                    reasonTextarea.focus();
+                    return false;
+                }
+                
+                // 最终确认
+                const reportId = '{{ approval.report_id }}';
+                const confirmMessage = `🔴 最终确认驳回\n\n` +
+                                     `报告编号：${reportId}\n` +
+                                     `驳回原因：${reason.substring(0, 100)}${reason.length > 100 ? '...' : ''}\n\n` +
+                                     `确认驳回此报告？此操作不可撤销。`;
+                
+                const confirmed = confirm(confirmMessage);
+                
+                if (!confirmed) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // 显示加载状态
+                loading.style.display = 'block';
+                submitBtn.disabled = true;
+                submitBtn.textContent = '提交中...';
+                
+                // 记录操作
+                console.log(`驳回操作执行：${reportId} - ${new Date().toISOString()}`);
+            });
+
+            // 自动保存功能（本地存储）
+            const storageKey = `reject_reason_{{ approval.report_id }}`;
+            
+            // 恢复之前输入的内容
+            const savedReason = localStorage.getItem(storageKey);
+            if (savedReason && !reasonTextarea.value) {
+                reasonTextarea.value = savedReason;
+                updateCharCount();
+            }
+
+            // 自动保存输入内容
+            let saveTimeout;
+            reasonTextarea.addEventListener('input', function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    localStorage.setItem(storageKey, this.value);
+                }, 1000);
+            });
+
+            // 提交成功后清除本地存储
+            form.addEventListener('submit', function() {
+                localStorage.removeItem(storageKey);
+            });
+
+            // 键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter 快速提交（需要内容符合要求）
+                if (e.ctrlKey && e.key === 'Enter' && !submitBtn.disabled) {
+                    e.preventDefault();
+                    form.dispatchEvent(new Event('submit'));
+                }
+                
+                // Esc 键取消
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (confirm('确定要取消驳回操作吗？已输入的内容将被保存。')) {
+                        history.back();
+                    }
+                }
+            });
+
+            // 页面离开提醒
+            let formSubmitted = false;
+            form.addEventListener('submit', function() {
+                formSubmitted = true;
+            });
+
+            window.addEventListener('beforeunload', function(e) {
+                if (!formSubmitted && reasonTextarea.value.trim().length > 0) {
+                    const message = '您有未提交的驳回原因，确定要离开页面吗？';
+                    e.returnValue = message;
+                    return message;
+                }
+            });
+
+            // 初始化字符计数
+            updateCharCount();
+
+            // 网络环境检查
+            const hostname = window.location.hostname;
+            const isLocalNetwork = (
+                hostname.startsWith('192.168.') ||
+                hostname.startsWith('10.') ||
+                hostname.startsWith('172.') ||
+                hostname === 'localhost' ||
+                hostname === '127.0.0.1'
+            );
+            
+            if (!isLocalNetwork) {
+                alert('⚠️ 安全警告：检测到您可能不在局域网环境中访问此页面，请确认网络安全后再进行操作。');
+            }
+        });
+    </script>
+</body>
+</html>

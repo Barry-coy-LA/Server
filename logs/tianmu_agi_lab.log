@@ -1,8 +1,202 @@
-2025-06-14 18:00:31,168 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
-2025-06-14 18:00:31,168 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
-2025-06-14 18:01:16,038 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
-2025-06-14 18:01:16,038 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
-2025-06-14 18:01:35,092 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
-2025-06-14 18:01:35,092 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
-2025-06-14 18:10:11,609 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
-2025-06-14 18:10:11,610 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:55:15,779 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-14 22:55:15,779 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:57:53,536 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-14 22:57:53,536 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:59:13,512 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-14 22:59:13,512 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:59:16,882 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-14 22:59:16,882 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-14 22:59:16,882 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:59:16,882 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ OCR模块已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ OCR模块已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 人脸识别模块已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 人脸识别模块已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统已加载
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 静态文件系统已启动: app/static
+2025-06-14 22:59:16,883 [INFO] TianMu-AGI-Lab: ✅ 静态文件系统已启动: app/static
+2025-06-14 22:59:16,884 [INFO] TianMu-AGI-Lab: ✅ 管理后台路由已注册
+2025-06-14 22:59:16,884 [INFO] TianMu-AGI-Lab: ✅ 管理后台路由已注册
+2025-06-14 22:59:16,884 [INFO] TianMu-AGI-Lab: ✅ OCR路由已注册
+2025-06-14 22:59:16,884 [INFO] TianMu-AGI-Lab: ✅ OCR路由已注册
+2025-06-14 22:59:16,886 [INFO] TianMu-AGI-Lab: ✅ 人脸识别路由已注册
+2025-06-14 22:59:16,886 [INFO] TianMu-AGI-Lab: ✅ 人脸识别路由已注册
+2025-06-14 22:59:16,888 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统路由已注册
+2025-06-14 22:59:16,888 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统路由已注册
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: [STARTUP] TianMu工业AGI试验台正在启动...
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: [STARTUP] TianMu工业AGI试验台正在启动...
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,889 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 主机名: liuchengyideMacBook-Pro.local
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 主机名: liuchengyideMacBook-Pro.local
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 主IP地址: 198.18.0.1
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 主IP地址: 198.18.0.1
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 所有IP地址: 169.254.223.252, 192.168.1.9
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [NETWORK] 所有IP地址: 169.254.223.252, 192.168.1.9
+2025-06-14 22:59:16,899 [INFO] app.services.usage_tracker: 使用追踪器初始化完成，加载了 0 条记录
+2025-06-14 22:59:16,899 [INFO] app.services.usage_tracker: 使用追踪器初始化完成，加载了 0 条记录
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 数据追踪系统已启动
+2025-06-14 22:59:16,899 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 数据追踪系统已启动
+2025-06-14 22:59:16,899 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 22:59:16,899 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 22:59:16,900 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 22:59:16,900 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 22:59:16,900 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 22:59:16,900 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 实验审批系统已启动
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 实验审批系统已启动
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 系统资源: 10核心, 16.0GB内存
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 系统资源: 10核心, 16.0GB内存
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 工业控制台界面已就绪
+2025-06-14 22:59:16,900 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 工业控制台界面已就绪
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 已加载模块: 管理后台, OCR引擎, 生物识别, 实验审批, 使用追踪
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 已加载模块: 管理后台, OCR引擎, 生物识别, 实验审批, 使用追踪
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS] 🌐 局域网访问地址:
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS] 🌐 局域网访问地址:
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS]    http://169.254.223.252:8000
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS]    http://169.254.223.252:8000
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS]    http://192.168.1.9:8000
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ACCESS]    http://192.168.1.9:8000
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 可用服务端点:
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 可用服务端点:
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🧠 AGI控制中心: /admin/login
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🧠 AGI控制中心: /admin/login
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 OCR接口: /ocr/table
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 OCR接口: /ocr/table
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔒 生物识别: /face/register
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔒 生物识别: /face/register
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📋 实验审批: /approval/test
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📋 实验审批: /approval/test
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📚 系统文档: /docs
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📚 系统文档: /docs
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔍 健康监控: /health
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔍 健康监控: /health
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 系统监控: /api/system-monitor
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 系统监控: /api/system-monitor
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🌐 网络信息: /api/network-info
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🌐 网络信息: /api/network-info
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📈 审批统计: /api/approval-stats
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📈 审批统计: /api/approval-stats
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [SYSTEM] 🚀 TianMu工业AGI试验台启动完成
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [SYSTEM] 🚀 TianMu工业AGI试验台启动完成
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [SYSTEM] 🔗 局域网内其他设备可通过以上地址访问
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: [SYSTEM] 🔗 局域网内其他设备可通过以上地址访问
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:16,901 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-14 22:59:40,916 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 22:59:40,916 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 22:59:40,918 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 22:59:40,918 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 22:59:40,919 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 22:59:40,919 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:00:40,926 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:00:40,926 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:00:40,929 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:00:40,929 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:00:40,929 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:00:40,929 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:00:53,222 [INFO] TianMu-AGI-Lab: 📄 返回工业AGI控制台界面
+2025-06-14 23:00:53,222 [INFO] TianMu-AGI-Lab: 📄 返回工业AGI控制台界面
+2025-06-14 23:00:53,552 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:00:53,552 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:00:53,552 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:00:53,552 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:00:53,553 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:00:53,553 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:03,947 [INFO] TianMu-AGI-Lab: 📄 返回工业AGI控制台界面
+2025-06-14 23:01:03,947 [INFO] TianMu-AGI-Lab: 📄 返回工业AGI控制台界面
+2025-06-14 23:01:04,506 [WARNING] TianMu-AGI-Lab: [404] 未找到资源: /favicon.ico
+2025-06-14 23:01:04,506 [WARNING] TianMu-AGI-Lab: [404] 未找到资源: /favicon.ico
+2025-06-14 23:01:04,795 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:04,795 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:04,797 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:04,797 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:04,798 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:04,798 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:05,643 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:05,643 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:05,645 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:05,645 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:05,646 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:05,646 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:14,914 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:14,914 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:14,915 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:14,915 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:14,916 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:14,916 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:15,972 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:15,972 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:15,974 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:15,974 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:15,975 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:15,975 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:24,077 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:24,077 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:24,078 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:24,078 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:24,079 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:24,079 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:28,758 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:28,758 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:28,760 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:28,760 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:28,761 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:28,761 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:33,921 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:33,921 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:33,923 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:33,923 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:33,924 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:33,924 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:40,924 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:40,924 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:40,926 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:40,926 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:40,927 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:40,927 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:44,084 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:44,084 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:44,086 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:44,086 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:44,088 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:44,088 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:57,509 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:57,509 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:01:57,511 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:57,511 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:01:57,512 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:01:57,512 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:02:03,471 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:02:03,471 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:02:03,472 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:02:03,472 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:02:03,473 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:02:03,473 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:02:13,472 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:02:13,472 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-14 23:02:13,476 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:02:13,476 [INFO] app.services.approval_service: 成功加载 0 条审批记录
+2025-06-14 23:02:13,477 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:02:13,477 [INFO] app.services.approval_service: 成功加载 0 条审批日志
+2025-06-14 23:02:15,689 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🛑 TianMu工业AGI试验台正在关闭...
+2025-06-14 23:02:15,689 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🛑 TianMu工业AGI试验台正在关闭...
+2025-06-14 23:02:15,690 [INFO] app.services.pdf_generator: PDF生成器已初始化
+2025-06-14 23:02:15,690 [INFO] app.services.pdf_generator: PDF生成器已初始化
+2025-06-14 23:02:15,691 [INFO] app.services.pdf_generator: 清理了 0 个旧PDF文件
+2025-06-14 23:02:15,691 [INFO] app.services.pdf_generator: 清理了 0 个旧PDF文件
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🧹 清理了 0 个旧PDF文件
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🧹 清理了 0 个旧PDF文件
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 💾 保存系统状态...
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 💾 保存系统状态...
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭
+2025-06-14 23:02:15,691 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭

@@ -1,0 +1,549 @@
+<!-- app/templates/approval_confirm.html - 审批确认页面 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>确认审批 - TianMu审批系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .icon.approve { 
+            color: #28a745; 
+        }
+        
+        .icon.reject { 
+            color: #dc3545; 
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .report-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+            border: 2px solid #e9ecef;
+        }
+
+        .info-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 100px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-label::before {
+            content: "▶";
+            color: #007bff;
+            font-size: 12px;
+        }
+
+        .info-value {
+            color: #333;
+            flex: 1;
+            text-align: right;
+            word-break: break-word;
+            font-weight: 500;
+        }
+
+        .warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .warning::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #ffc107;
+        }
+
+        .warning h3 {
+            color: #856404;
+            margin-bottom: 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning ul {
+            color: #856404;
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+
+        .warning li {
+            margin-bottom: 6px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            min-width: 160px;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-confirm:hover {
+            background: linear-gradient(135deg, #218838 0%, #1aa085 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-reject-confirm {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-reject-confirm:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
+        .footer {
+            margin-top: 35px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+            line-height: 1.5;
+        }
+
+        .security-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid #90caf9;
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-badge.approve {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .action-badge.reject {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .info-value {
+                text-align: left;
+            }
+
+            .title {
+                font-size: 24px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon {{ 'approve' if action == 'approve' else 'reject' }}">
+            {{ '✅' if action == 'approve' else '❌' }}
+        </div>
+        
+        <h1 class="title">确认{{ action_text }}审批</h1>
+        <p class="subtitle">请仔细核对以下信息，确认无误后进行操作</p>
+        
+        <div class="report-info">
+            <div class="info-header">📋 实验报告详情</div>
+            
+            <div class="info-row">
+                <span class="info-label">报告编号</span>
+                <span class="info-value"><strong>{{ approval.report_id }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">报告标题</span>
+                <span class="info-value">{{ approval.title }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">操作员</span>
+                <span class="info-value">{{ approval.operator }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">提交时间</span>
+                <span class="info-value">{{ approval.created_at.strftime('%Y年%m月%d日 %H:%M:%S') }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">审批人</span>
+                <span class="info-value">{{ approval.approver_email }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">当前状态</span>
+                <span class="info-value">
+                    <span class="security-badge">{{ approval.status.value.upper() }}</span>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">操作类型</span>
+                <span class="info-value">
+                    <span class="action-badge {{ action }}">{{ action_text.upper() }}</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 重要操作提醒</h3>
+            <ul>
+                <li><strong>此操作不可撤销</strong>，请谨慎操作</li>
+                <li>审批后系统将自动记录您的IP地址和操作时间</li>
+                <li>{{ '通过审批后，报告将被标记为已批准状态' if action == 'approve' else '驳回后，操作员需要重新提交报告' }}</li>
+                <li>操作记录将用于审计追溯，请确保本人操作</li>
+                <li>如有疑问，请联系报告提交人员进行确认</li>
+            </ul>
+        </div>
+
+        <div class="buttons">
+            <a href="{{ confirm_url }}" class="btn {{ 'btn-confirm' if action == 'approve' else 'btn-reject-confirm' }}" id="confirmBtn">
+                {{ '✅ 确认通过' if action == 'approve' else '❌ 确认驳回' }}
+            </a>
+            <a href="javascript:history.back()" class="btn btn-cancel">
+                🔙 取消操作
+            </a>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在处理审批操作，请稍候...</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
+            <p>本页面仅在局域网内有效 · 请确保在安全的网络环境中操作</p>
+            <p>审批时间：{{ moment().format('YYYY年MM月DD日 HH:mm:ss') }}</p>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时的安全检查和初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否为局域网环境
+            const hostname = window.location.hostname;
+            const isLocalNetwork = (
+                hostname.startsWith('192.168.') ||
+                hostname.startsWith('10.') ||
+                hostname.startsWith('172.') ||
+                hostname === 'localhost' ||
+                hostname === '127.0.0.1'
+            );
+            
+            if (!isLocalNetwork) {
+                alert('⚠️ 安全警告：检测到您可能不在局域网环境中访问此页面，请确认网络安全后再进行操作。');
+            }
+            
+            // 获取确认按钮
+            const confirmBtn = document.getElementById('confirmBtn');
+            const loading = document.getElementById('loading');
+            
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const action = '{{ action_text }}';
+                    const reportId = '{{ approval.report_id }}';
+                    const reportTitle = '{{ approval.title }}';
+                    
+                    // 第一次确认
+                    const confirmMessage = `您确定要${action}以下报告吗？\n\n` +
+                                         `报告编号：${reportId}\n` +
+                                         `报告标题：${reportTitle}\n\n` +
+                                         `⚠️ 此操作不可撤销，请确认无误后继续。`;
+                    
+                    const firstConfirm = confirm(confirmMessage);
+                    if (!firstConfirm) {
+                        return false;
+                    }
+                    
+                    // 第二次确认（更严格）
+                    const finalConfirmMessage = `🔴 最终确认\n\n` +
+                                              `请再次确认您要${action}报告"${reportId}"？\n\n` +
+                                              `点击"确定"后将立即执行操作。`;
+                    
+                    const finalConfirm = confirm(finalConfirmMessage);
+                    if (!finalConfirm) {
+                        return false;
+                    }
+                    
+                    // 显示加载状态
+                    loading.style.display = 'block';
+                    confirmBtn.style.display = 'none';
+                    
+                    // 记录操作时间
+                    console.log(`审批操作执行：${action} - ${reportId} - ${new Date().toISOString()}`);
+                    
+                    // 执行跳转
+                    setTimeout(() => {
+                        window.location.href = confirmBtn.href;
+                    }, 500);
+                });
+            }
+            
+            // 键盘快捷键支持
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter 快速确认
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmBtn.click();
+                }
+                
+                // Esc 键取消
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    history.back();
+                }
+            });
+            
+            // 防止误操作 - 页面离开提醒
+            let operationInProgress = false;
+            
+            confirmBtn.addEventListener('click', function() {
+                operationInProgress = true;
+            });
+            
+            window.addEventListener('beforeunload', function(e) {
+                if (!operationInProgress) {
+                    const message = '您确定要离开审批页面吗？未完成的操作将被取消。';
+                    e.returnValue = message;
+                    return message;
+                }
+            });
+            
+            // 定时检查Token有效性（每5分钟检查一次）
+            setInterval(function() {
+                const tokenExpireTime = new Date('{{ approval.token_expires_at.isoformat() }}');
+                const now = new Date();
+                const timeLeft = tokenExpireTime - now;
+                
+                if (timeLeft <= 0) {
+                    alert('⏰ 审批链接已过期，页面将自动刷新。');
+                    window.location.reload();
+                } else if (timeLeft <= 5 * 60 * 1000) { // 5分钟内过期
+                    const minutesLeft = Math.ceil(timeLeft / (60 * 1000));
+                    console.warn(`审批链接将在 ${minutesLeft} 分钟后过期`);
+                }
+            }, 5 * 60 * 1000); // 每5分钟检查一次
+        });
+        
+        // 页面可见性检测
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                // 页面重新可见时检查Token状态
+                const tokenExpireTime = new Date('{{ approval.token_expires_at.isoformat() }}');
+                const now = new Date();
+                
+                if (now > tokenExpireTime) {
+                    alert('⏰ 审批链接已过期，请重新获取审批邮件。');
+                    window.location.href = '/';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

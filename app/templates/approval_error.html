@@ -1,0 +1,836 @@
+<!-- app/templates/approval_error.html - 审批错误页面 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审批错误 - TianMu审批系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 背景警告条纹 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 20px,
+                rgba(255, 255, 255, 0.05) 20px,
+                rgba(255, 255, 255, 0.05) 40px
+            );
+            animation: slideStripes 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes slideStripes {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(40px); }
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            animation: errorShake 0.8s ease-out;
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .error-icon {
+            font-size: 5rem;
+            color: #dc3545;
+            margin-bottom: 25px;
+            animation: errorPulse 2s infinite;
+            position: relative;
+        }
+
+        @keyframes errorPulse {
+            0%, 100% { 
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(220, 53, 69, 0.3));
+            }
+            50% { 
+                transform: scale(1.1);
+                filter: drop-shadow(0 0 20px rgba(220, 53, 69, 0.6));
+            }
+        }
+
+        .error-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 120%;
+            height: 120%;
+            border: 2px solid #dc3545;
+            border-radius: 50%;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8);
+            animation: errorRing 2s infinite;
+        }
+
+        @keyframes errorRing {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            50% {
+                opacity: 0.3;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .error-code {
+            font-size: 18px;
+            color: #dc3545;
+            font-weight: 600;
+            margin-bottom: 25px;
+            padding: 8px 16px;
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 20px;
+            display: inline-block;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .message {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .error-details {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 6px solid #dc3545;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+            border-radius: 0 12px 12px 0;
+            position: relative;
+        }
+
+        .error-details::before {
+            content: '⚠️';
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 20px;
+        }
+
+        .error-details .details-content {
+            margin-left: 35px;
+        }
+
+        .error-details h3 {
+            color: #dc3545;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .error-details p {
+            color: #495057;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .help-info {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: left;
+            position: relative;
+        }
+
+        .help-info::before {
+            content: '💡';
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 20px;
+        }
+
+        .help-info h3 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 16px;
+            margin-left: 35px;
+        }
+
+        .help-info ul {
+            color: #856404;
+            padding-left: 55px;
+            line-height: 1.6;
+        }
+
+        .help-info li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .help-info li strong {
+            color: #5a4703;
+        }
+
+        .client-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #2196f3;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            font-size: 12px;
+            color: #1976d2;
+            text-align: left;
+            border-left: 6px solid #1976d2;
+        }
+
+        .client-info h4 {
+            margin-bottom: 10px;
+            color: #0d47a1;
+        }
+
+        .client-info .warning-text {
+            color: #d32f2f;
+            font-weight: 600;
+        }
+
+        .actions {
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 150px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-refresh:hover {
+            background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+            padding-top: 25px;
+            line-height: 1.6;
+        }
+
+        .error-id {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #495057;
+            margin-top: 15px;
+        }
+
+        /* 网络状态指示器 */
+        .network-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .network-status.safe {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .network-status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .network-status.danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 25px;
+                margin: 15px;
+            }
+
+            .title {
+                font-size: 26px;
+            }
+
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 280px;
+                margin: 5px 0;
+            }
+
+            .network-status {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 15px auto;
+                display: block;
+                text-align: center;
+                max-width: 300px;
+            }
+
+            .error-icon {
+                font-size: 4rem;
+            }
+        }
+
+        /* 动画延迟类 */
+        .fade-in-delay-1 { animation: fadeInUp 0.6s ease-out 0.2s both; }
+        .fade-in-delay-2 { animation: fadeInUp 0.6s ease-out 0.4s both; }
+        .fade-in-delay-3 { animation: fadeInUp 0.6s ease-out 0.6s both; }
+        .fade-in-delay-4 { animation: fadeInUp 0.6s ease-out 0.8s both; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 网络状态指示器 -->
+    <div class="network-status" id="networkStatus">
+        检查网络环境中...
+    </div>
+
+    <div class="container">
+        <div class="error-icon">🚫</div>
+        
+        <h1 class="title fade-in-delay-1">审批操作失败</h1>
+        <div class="error-code fade-in-delay-1">错误：{{ error }}</div>
+        <p class="message fade-in-delay-2">{{ message }}</p>
+        
+        <div class="error-details fade-in-delay-2">
+            <div class="details-content">
+                <h3>错误详情</h3>
+                <p><strong>错误类型：</strong>{{ error }}</p>
+                <p><strong>错误描述：</strong>{{ message }}</p>
+                {% if client_ip %}
+                <p><strong>您的IP地址：</strong>{{ client_ip }}</p>
+                {% endif %}
+                <p><strong>发生时间：</strong><span id="currentTime"></span></p>
+            </div>
+        </div>
+
+        <div class="help-info fade-in-delay-3">
+            <h3>可能的解决方案</h3>
+            <ul>
+                <li><strong>链接已过期：</strong>审批链接的有效期为30分钟，请联系报告提交人重新发送审批邮件</li>
+                <li><strong>链接已使用：</strong>每个审批链接只能使用一次，如果已经完成审批则无法重复操作</li>
+                <li><strong>网络访问限制：</strong>审批链接仅在公司局域网内有效，请确保您在正确的网络环境中</li>
+                <li><strong>链接格式错误：</strong>请检查邮件中的链接是否完整，避免复制时出现截断</li>
+                <li><strong>系统维护：</strong>如果系统正在维护，请稍后重试或联系管理员</li>
+                <li><strong>浏览器兼容性：</strong>建议使用Chrome、Firefox、Edge等现代浏览器</li>
+            </ul>
+        </div>
+
+        {% if client_ip %}
+        <div class="client-info fade-in-delay-3">
+            <h4>🌐 网络环境信息</h4>
+            <p><strong>您的IP地址：</strong>{{ client_ip }}</p>
+            <p><strong>访问时间：</strong><span id="accessTime"></span></p>
+            <p><strong>用户代理：</strong><span id="userAgent"></span></p>
+            {% if not (client_ip.startswith('192.168.') or client_ip.startswith('10.') or client_ip == '127.0.0.1') %}
+            <p class="warning-text"><strong>⚠️ 警告：</strong>检测到您可能不在局域网环境中访问，这可能是导致错误的原因</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="actions fade-in-delay-4">
+            <a href="/" class="btn btn-primary">🏠 返回首页</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">🔙 返回上页</a>
+            <a href="javascript:location.reload()" class="btn btn-refresh">🔄 刷新页面</a>
+        </div>
+
+        <div class="footer fade-in-delay-4">
+            <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
+            <p>如需技术支持，请联系系统管理员或报告提交人员</p>
+            <p>系统版本：v2.1.0 | 错误时间：<span id="errorTime"></span></p>
+            
+            <div class="error-id">
+                错误ID：ERROR_{{ error.upper().replace(' ', '_') }}_{{ moment().format('YYYYMMDDHHmmss') }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置时间显示
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN');
+            
+            const currentTimeEl = document.getElementById('currentTime');
+            const accessTimeEl = document.getElementById('accessTime');
+            const errorTimeEl = document.getElementById('errorTime');
+            const userAgentEl = document.getElementById('userAgent');
+            
+            if (currentTimeEl) currentTimeEl.textContent = timeStr;
+            if (accessTimeEl) accessTimeEl.textContent = timeStr;
+            if (errorTimeEl) errorTimeEl.textContent = timeStr;
+            if (userAgentEl) userAgentEl.textContent = navigator.userAgent;
+
+            // 网络环境检查
+            checkNetworkEnvironment();
+
+            // 记录错误信息到控制台
+            console.error('审批系统访问失败:', {
+                error: '{{ error }}',
+                message: '{{ message }}',
+                timestamp: now.toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer
+            });
+
+            // 键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'Escape':
+                        e.preventDefault();
+                        history.back();
+                        break;
+                    case 'F5':
+                        e.preventDefault();
+                        location.reload();
+                        break;
+                    case 'Enter':
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            window.location.href = '/';
+                        }
+                        break;
+                }
+            });
+
+            // 自动重试机制（仅对特定错误）
+            const error = '{{ error }}';
+            if (error.includes('网络') || error.includes('连接')) {
+                setTimeout(function() {
+                    if (confirm('检测到网络相关错误，是否自动重试？')) {
+                        location.reload();
+                    }
+                }, 3000);
+            }
+
+            // 错误报告发送（如果有监控系统）
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'approval_error', {
+                    'error_type': '{{ error }}',
+                    'error_message': '{{ message }}',
+                    'client_ip': '{{ client_ip if client_ip else "unknown" }}',
+                    'timestamp': now.toISOString()
+                });
+            }
+
+            // 页面可见性检测
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                    // 页面重新可见时可以检查网络状态
+                    checkNetworkEnvironment();
+                }
+            });
+        });
+
+        function checkNetworkEnvironment() {
+            const hostname = window.location.hostname;
+            const networkStatus = document.getElementById('networkStatus');
+            
+            const isLocalNetwork = (
+                hostname.startsWith('192.168.') ||
+                hostname.startsWith('10.') ||
+                hostname.startsWith('172.') ||
+                hostname === 'localhost' ||
+                hostname === '127.0.0.1'
+            );
+            
+            if (isLocalNetwork) {
+                networkStatus.className = 'network-status safe';
+                networkStatus.innerHTML = '✅ 局域网环境正常';
+            } else {
+                networkStatus.className = 'network-status danger';
+                networkStatus.innerHTML = '⚠️ 非局域网环境';
+                
+                // 显示更明显的警告
+                setTimeout(() => {
+                    if (!document.querySelector('.network-warning-shown')) {
+                        showNetworkWarning();
+                    }
+                }, 1000);
+            }
+            
+            // 5秒后隐藏状态指示器
+            setTimeout(() => {
+                if (networkStatus) {
+                    networkStatus.style.opacity = '0';
+                    setTimeout(() => {
+                        networkStatus.style.display = 'none';
+                    }, 500);
+                }
+            }, 5000);
+        }
+
+        function showNetworkWarning() {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'network-warning-shown';
+            warningDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #dc3545;
+                color: white;
+                padding: 20px 30px;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: 600;
+                z-index: 9999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                text-align: center;
+                max-width: 400px;
+                animation: warningPulse 1s infinite;
+            `;
+            
+            warningDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                <div>网络环境警告</div>
+                <div style="font-size: 14px; margin-top: 10px; opacity: 0.9;">
+                    您当前不在局域网中访问此系统<br>
+                    审批功能仅在公司内网中可用
+                </div>
+                <button onclick="this.parentElement.remove()" style="
+                    margin-top: 15px;
+                    padding: 8px 16px;
+                    background: white;
+                    color: #dc3545;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">我知道了</button>
+            `;
+            
+            document.body.appendChild(warningDiv);
+            
+            // 添加警告动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes warningPulse {
+                    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+                    50% { transform: translate(-50%, -50%) scale(1.05); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 10秒后自动移除
+            setTimeout(() => {
+                if (warningDiv.parentElement) {
+                    warningDiv.remove();
+                }
+            }, 10000);
+        }
+
+        // 网络连接检测
+        function checkConnectivity() {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const timeout = setTimeout(() => {
+                    resolve(false);
+                }, 5000);
+                
+                img.onload = () => {
+                    clearTimeout(timeout);
+                    resolve(true);
+                };
+                
+                img.onerror = () => {
+                    clearTimeout(timeout);
+                    resolve(false);
+                };
+                
+                // 尝试加载一个小图片来检测连接
+                img.src = '/static/favicon.ico?' + Date.now();
+            });
+        }
+
+        // 页面性能监控
+        window.addEventListener('load', function() {
+            const loadTime = performance.now();
+            console.log(`错误页面加载时间: ${loadTime.toFixed(2)}ms`);
+            
+            // 检测页面加载性能
+            if (loadTime > 3000) {
+                console.warn('页面加载较慢，可能存在网络问题');
+            }
+        });
+
+        // 浏览器兼容性检查
+        function checkBrowserCompatibility() {
+            const warnings = [];
+            
+            if (!window.fetch) {
+                warnings.push('您的浏览器版本较旧，可能影响系统功能');
+            }
+            
+            if (!window.Promise) {
+                warnings.push('浏览器不支持某些现代功能');
+            }
+            
+            if (!document.querySelector) {
+                warnings.push('建议更新到最新版本的浏览器');
+            }
+            
+            if (warnings.length > 0) {
+                console.warn('浏览器兼容性警告:', warnings);
+                
+                // 显示兼容性提示
+                setTimeout(() => {
+                    const compatible = confirm(
+                        '检测到浏览器兼容性问题：\n\n' + 
+                        warnings.join('\n') + 
+                        '\n\n建议使用Chrome、Firefox、Edge等现代浏览器。\n\n是否继续使用当前浏览器？'
+                    );
+                    
+                    if (!compatible) {
+                        window.close();
+                    }
+                }, 2000);
+            }
+        }
+
+        // 执行浏览器兼容性检查
+        checkBrowserCompatibility();
+
+        // 错误重试机制
+        function retryWithDelay(retryCount = 0) {
+            const maxRetries = 3;
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // 指数退避
+            
+            if (retryCount < maxRetries) {
+                setTimeout(() => {
+                    checkConnectivity().then(isConnected => {
+                        if (isConnected) {
+                            if (confirm('网络连接已恢复，是否重新尝试访问？')) {
+                                location.reload();
+                            }
+                        } else {
+                            retryWithDelay(retryCount + 1);
+                        }
+                    });
+                }, delay);
+            }
+        }
+
+        // 如果是网络相关错误，启动重试机制
+        const errorMessage = '{{ message }}';
+        if (errorMessage.includes('网络') || errorMessage.includes('连接') || errorMessage.includes('超时')) {
+            retryWithDelay();
+        }
+
+        // 添加右键菜单增强
+        document.addEventListener('contextmenu', function(e) {
+            // 在错误页面允许右键菜单，方便调试
+            console.log('右键菜单：允许查看页面源码和开发者工具');
+        });
+
+        // 复制错误信息功能
+        function copyErrorInfo() {
+            const errorInfo = `
+错误类型: {{ error }}
+错误描述: {{ message }}
+时间: ${new Date().toLocaleString()}
+URL: ${window.location.href}
+用户代理: ${navigator.userAgent}
+IP地址: {{ client_ip if client_ip else "未知" }}
+            `.trim();
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(errorInfo).then(() => {
+                    alert('错误信息已复制到剪贴板');
+                });
+            } else {
+                // 兼容旧浏览器
+                const textArea = document.createElement('textarea');
+                textArea.value = errorInfo;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('错误信息已复制到剪贴板');
+            }
+        }
+
+        // 添加复制按钮
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '📋 复制错误信息';
+        copyBtn.className = 'btn btn-secondary';
+        copyBtn.style.fontSize = '14px';
+        copyBtn.style.padding = '10px 20px';
+        copyBtn.onclick = copyErrorInfo;
+        
+        const actionsDiv = document.querySelector('.actions');
+        if (actionsDiv) {
+            actionsDiv.appendChild(copyBtn);
+        }
+
+        // 错误统计和上报
+        if (window.navigator.sendBeacon) {
+            const errorData = JSON.stringify({
+                type: 'approval_error',
+                error: '{{ error }}',
+                message: '{{ message }}',
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                clientIP: '{{ client_ip if client_ip else "unknown" }}'
+            });
+            
+            // 发送错误统计（如果有统计服务）
+            try {
+                navigator.sendBeacon('/api/error-report', errorData);
+            } catch (e) {
+                console.log('错误统计发送失败:', e);
+            }
+        }
+    </script>
+</body>
+</html>

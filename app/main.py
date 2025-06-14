@@ -1,6 +1,7 @@
-# app/main.py - 简化版本，解决导入问题
+# app/main.py - 支持局域网访问的服务器配置（更新版本）
 import sys
 import os
+import socket
 from pathlib import Path
 
 # 添加项目根目录到Python路径
@@ -16,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.exceptions import HTTPException
+from fastapi.templating import Jinja2Templates
 import logging
 import psutil
 import platform
@@ -23,12 +25,87 @@ from datetime import datetime
 import asyncio
 from typing import Dict, Any
 
+# ========== 网络配置工具函数 ==========
+def get_local_ip() -> str:
+    """获取本机局域网IP地址"""
+    try:
+        # 创建UDP socket连接来获取本机IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        # 如果获取失败，尝试其他方法
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            if local_ip.startswith("127."):
+                # 如果是回环地址，尝试获取所有网络接口
+                import netifaces
+                for interface in netifaces.interfaces():
+                    addresses = netifaces.ifaddresses(interface)
+                    if netifaces.AF_INET in addresses:
+                        for addr in addresses[netifaces.AF_INET]:
+                            ip = addr['addr']
+                            if ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'):
+                                return ip
+        except ImportError:
+            pass
+        return "192.168.1.100"  # 默认值
+
+def get_all_local_ips() -> list:
+    """获取所有本机IP地址"""
+    ips = []
+    try:
+        # 获取所有网络接口
+        for interface_name in socket.if_nameindex():
+            interface = interface_name[1]
+            try:
+                addresses = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
+                for addr in addresses:
+                    ip = addr[4][0]
+                    if not ip.startswith('127.') and ip not in ips:
+                        ips.append(ip)
+            except:
+                continue
+                
+        # 备用方法
+        if not ips:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            if not local_ip.startswith('127.'):
+                ips.append(local_ip)
+                
+    except Exception as e:
+        logging.warning(f"获取IP地址失败: {e}")
+    
+    return ips if ips else ["192.168.1.100"]
+
+def check_port_available(port: int, host: str = "0.0.0.0") -> bool:
+    """检查端口是否可用"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((host, port))
+            return True
+    except OSError:
+        return False
+
+def find_available_port(start_port: int = 8000, end_port: int = 8100) -> int:
+    """查找可用端口"""
+    for port in range(start_port, end_port):
+        if check_port_available(port):
+            return port
+    raise RuntimeError(f"无法找到可用端口 ({start_port}-{end_port})")
+
 # ========== 确保必要目录存在 ==========
 def ensure_directories():
     """确保所有必要的目录都存在"""
     directories = [
         "logs",
         "Data", 
+        "Data/approval",
+        "Data/approval/reports",
         "app/static",
         "app/templates"
     ]
@@ -82,6 +159,7 @@ admin_router = None
 usage_tracker = None
 ocr_router = None
 face_router = None
+approval_router = None
 
 try:
     from app.routers.admin import router as admin_router
@@ -107,29 +185,39 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ 无法加载人脸识别模块: {e}")
 
+try:
+    from app.routers.approval import router as approval_router
+    logger.info("✅ 实验审批系统已加载")
+except ImportError as e:
+    logger.warning(f"⚠️ 无法加载实验审批系统: {e}")
+
 # ========== 应用初始化 ==========
 app = FastAPI(
     title="TianMu工业AGI试验台",
-    description="先进制造业人工通用智能平台 - 支持OCR识别、计算机视觉、智能分析",
-    version="2.0.0",
+    description="先进制造业人工通用智能平台 - 支持OCR识别、计算机视觉、智能分析、实验审批",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
         {"name": "工业接口", "description": "与上位机和工业设备的通信接口"},
         {"name": "AGI模块", "description": "人工通用智能核心功能"},
         {"name": "监控系统", "description": "实时监控和系统状态"},
-        {"name": "管理后台", "description": "系统管理和配置界面"}
+        {"name": "管理后台", "description": "系统管理和配置界面"},
+        {"name": "实验审批系统", "description": "局域网邮件审批流程"}
     ]
 )
 
-# ========== 工业级中间件配置 ==========
+# ========== 局域网CORS中间件配置 ==========
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # 允许所有来源（局域网内安全）
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ========== 模板引擎配置 ==========
+templates = Jinja2Templates(directory="app/templates")
 
 # ========== 静态文件配置 ==========
 static_dir = Path("app/static")
@@ -140,7 +228,6 @@ else:
     logger.warning(f"⚠️ 静态文件目录不存在: {static_dir}")
 
 # ========== 路由注册 ==========
-# 注册可用的路由
 if admin_router:
     app.include_router(admin_router, tags=["管理后台"])
     logger.info("✅ 管理后台路由已注册")
@@ -153,6 +240,38 @@ if face_router:
     app.include_router(face_router, prefix="/face", tags=["工业接口"])
     logger.info("✅ 人脸识别路由已注册")
 
+if approval_router:
+    app.include_router(approval_router, tags=["实验审批系统"])
+    logger.info("✅ 实验审批系统路由已注册")
+
+# ========== 网络信息接口 ==========
+@app.get("/api/network-info", summary="网络信息", tags=["监控系统"])
+async def get_network_info():
+    """获取服务器网络信息"""
+    try:
+        local_ips = get_all_local_ips()
+        primary_ip = get_local_ip()
+        
+        return {
+            "primary_ip": primary_ip,
+            "all_ips": local_ips,
+            "access_urls": [f"http://{ip}:8000" for ip in local_ips],
+            "hostname": socket.gethostname(),
+            "port": 8000,
+            "network_interfaces": len(local_ips),
+            "lan_access": True
+        }
+    except Exception as e:
+        logger.error(f"获取网络信息失败: {e}")
+        return {
+            "primary_ip": "unknown",
+            "all_ips": [],
+            "access_urls": [],
+            "hostname": "unknown",
+            "port": 8000,
+            "error": str(e)
+        }
+
 # ========== 主界面路由 ==========
 @app.get("/", summary="工业AGI控制台", tags=["监控系统"])
 async def industrial_console():
@@ -164,19 +283,26 @@ async def industrial_console():
         return FileResponse(str(static_index))
     else:
         logger.warning("⚠️ 工业控制台界面文件缺失")
+        local_ips = get_all_local_ips()
         return JSONResponse(content={
             "system": "TianMu工业AGI试验台",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "status": "INTERFACE_MISSING",
             "message": "工业控制台界面文件不存在",
             "required_file": "app/static/index.html",
+            "network_info": {
+                "lan_ips": local_ips,
+                "access_urls": [f"http://{ip}:8000" for ip in local_ips]
+            },
             "services": {
                 "AGI_CONTROL": "/admin/login" if admin_router else "未加载",
                 "SYSTEM_DOCS": "/docs",
                 "HEALTH_CHECK": "/health",
                 "MONITORING": "/api/system-monitor",
                 "OCR_SERVICE": "/ocr/table" if ocr_router else "未加载",
-                "FACE_SERVICE": "/face/register" if face_router else "未加载"
+                "FACE_SERVICE": "/face/register" if face_router else "未加载",
+                "APPROVAL_SERVICE": "/approval/test" if approval_router else "未加载",
+                "NETWORK_INFO": "/api/network-info"
             },
             "setup_guide": [
                 "1. 创建目录: mkdir -p app/static",
@@ -185,7 +311,7 @@ async def industrial_console():
             ]
         })
 
-# ========== 基础监控接口 ==========
+# ========== 其他路由保持不变 ==========
 @app.get("/api/public-stats", summary="生产统计数据", tags=["监控系统"])
 async def get_production_stats():
     """获取生产线统计数据（公开接口）"""
@@ -196,7 +322,6 @@ async def get_production_stats():
             total_requests = stats.get("total_requests", 0)
             success_requests = stats.get("success_requests", 0)
             
-            # 计算生产效率
             efficiency = 100.0
             if total_requests > 0:
                 efficiency = (success_requests / total_requests) * 100
@@ -239,7 +364,6 @@ async def get_system_monitor():
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
         
-        # 安全地获取磁盘使用情况
         try:
             disk = psutil.disk_usage('/')
             disk_percent = disk.percent
@@ -275,21 +399,19 @@ async def get_system_monitor():
 async def industrial_health_check():
     """工业系统健康检查"""
     try:
-        # 检查已加载的组件
         components = {
             "AGI_CORE": "OPERATIONAL",
             "ADMIN_PANEL": "OPERATIONAL" if admin_router else "NOT_LOADED",
             "OCR_ENGINE": "OPERATIONAL" if ocr_router else "NOT_LOADED", 
             "BIOMETRIC_SECURITY": "OPERATIONAL" if face_router else "NOT_LOADED",
             "USAGE_TRACKER": "OPERATIONAL" if usage_tracker else "NOT_LOADED",
+            "APPROVAL_SYSTEM": "OPERATIONAL" if approval_router else "NOT_LOADED",
             "MONITORING_SYSTEM": "OPERATIONAL"
         }
         
-        # 检查资源状态
         cpu_ok = psutil.cpu_percent() < 80
         memory_ok = psutil.virtual_memory().percent < 85
         
-        # 安全地检查磁盘
         disk_ok = True
         try:
             disk_usage = psutil.disk_usage('/').percent
@@ -316,7 +438,12 @@ async def industrial_health_check():
                 "memory_ok": memory_ok,
                 "disk_ok": disk_ok
             },
-            "version": "2.0.0",
+            "network_info": {
+                "lan_ips": get_all_local_ips(),
+                "primary_ip": get_local_ip(),
+                "hostname": socket.gethostname()
+            },
+            "version": "2.1.0",
             "timestamp": datetime.now().isoformat(),
             "environment": "INDUSTRIAL"
         }
@@ -328,7 +455,40 @@ async def industrial_health_check():
             "timestamp": datetime.now().isoformat()
         }
 
-# ========== 辅助函数 ==========
+@app.get("/api/approval-stats", summary="审批系统统计", tags=["实验审批系统"])
+async def get_approval_stats():
+    """获取审批系统统计信息（公开接口）"""
+    try:
+        if approval_router:
+            from app.services.approval_service import ApprovalService
+            approval_service = ApprovalService()
+            
+            stats = await approval_service.get_approval_statistics()
+            
+            return {
+                "total_reports": stats.total_reports,
+                "pending_approvals": stats.pending_approvals,
+                "approved_reports": stats.approved_reports,
+                "rejected_reports": stats.rejected_reports,
+                "today_submissions": stats.today_submissions,
+                "avg_approval_time_minutes": stats.avg_approval_time_minutes,
+                "system_status": "OPERATIONAL",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "system_status": "NOT_LOADED",
+                "message": "审批系统未加载",
+                "timestamp": datetime.now().isoformat()
+            }
+    except Exception as e:
+        logger.error(f"[APPROVAL-STATS] 获取审批统计失败: {e}")
+        return {
+            "system_status": "ERROR",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 def get_current_shift() -> str:
     """获取当前班次"""
     hour = datetime.now().hour
@@ -348,12 +508,31 @@ async def startup_industrial_system():
     logger.info("=" * 60)
     
     try:
+        # 网络配置信息
+        local_ips = get_all_local_ips()
+        primary_ip = get_local_ip()
+        hostname = socket.gethostname()
+        
+        logger.info(f"[NETWORK] 主机名: {hostname}")
+        logger.info(f"[NETWORK] 主IP地址: {primary_ip}")
+        logger.info(f"[NETWORK] 所有IP地址: {', '.join(local_ips)}")
+        
         # 初始化使用追踪系统
         if usage_tracker:
             await usage_tracker.initialize()
             logger.info("[STARTUP] ✅ 数据追踪系统已启动")
         else:
             logger.warning("[STARTUP] ⚠️ 数据追踪系统未加载")
+        
+        # 初始化审批系统
+        if approval_router:
+            try:
+                from app.services.approval_service import ApprovalService
+                approval_service = ApprovalService()
+                await approval_service._ensure_cache_initialized()
+                logger.info("[STARTUP] ✅ 实验审批系统已启动")
+            except Exception as e:
+                logger.warning(f"[STARTUP] ⚠️ 审批系统初始化失败: {e}")
         
         # 检查系统资源
         cpu_count = psutil.cpu_count()
@@ -375,6 +554,8 @@ async def startup_industrial_system():
             loaded_modules.append("OCR引擎")
         if face_router:
             loaded_modules.append("生物识别")
+        if approval_router:
+            loaded_modules.append("实验审批")
         if usage_tracker:
             loaded_modules.append("使用追踪")
         
@@ -382,18 +563,28 @@ async def startup_industrial_system():
         
         # 启动完成
         logger.info("=" * 60)
-        logger.info("[ACCESS] 🌐 工业控制台: http://127.0.0.1:8000")
+        logger.info("[ACCESS] 🌐 局域网访问地址:")
+        for ip in local_ips:
+            logger.info(f"[ACCESS]    http://{ip}:8000")
+        logger.info("=" * 60)
+        logger.info("[ENDPOINTS] 可用服务端点:")
         if admin_router:
-            logger.info("[ACCESS] 🧠 AGI控制中心: http://127.0.0.1:8000/admin/login")
+            logger.info("[ENDPOINTS] 🧠 AGI控制中心: /admin/login")
         if ocr_router:
-            logger.info("[ACCESS] 📊 OCR接口: http://127.0.0.1:8000/ocr/table")
+            logger.info("[ENDPOINTS] 📊 OCR接口: /ocr/table")
         if face_router:
-            logger.info("[ACCESS] 🔒 生物识别: http://127.0.0.1:8000/face/register")
-        logger.info("[ACCESS] 📚 系统文档: http://127.0.0.1:8000/docs")
-        logger.info("[ACCESS] 🔍 健康监控: http://127.0.0.1:8000/health")
-        logger.info("[ACCESS] 📊 系统监控: http://127.0.0.1:8000/api/system-monitor")
+            logger.info("[ENDPOINTS] 🔒 生物识别: /face/register")
+        if approval_router:
+            logger.info("[ENDPOINTS] 📋 实验审批: /approval/test")
+        logger.info("[ENDPOINTS] 📚 系统文档: /docs")
+        logger.info("[ENDPOINTS] 🔍 健康监控: /health")
+        logger.info("[ENDPOINTS] 📊 系统监控: /api/system-monitor")
+        logger.info("[ENDPOINTS] 🌐 网络信息: /api/network-info")
+        if approval_router:
+            logger.info("[ENDPOINTS] 📈 审批统计: /api/approval-stats")
         logger.info("=" * 60)
         logger.info("[SYSTEM] 🚀 TianMu工业AGI试验台启动完成")
+        logger.info("[SYSTEM] 🔗 局域网内其他设备可通过以上地址访问")
         logger.info("=" * 60)
         
     except Exception as e:
@@ -404,6 +595,16 @@ async def startup_industrial_system():
 async def shutdown_industrial_system():
     """工业AGI系统关闭"""
     logger.info("[SHUTDOWN] 🛑 TianMu工业AGI试验台正在关闭...")
+    
+    if approval_router:
+        try:
+            from app.services.pdf_generator import PDFGenerator
+            pdf_generator = PDFGenerator()
+            cleaned = pdf_generator.cleanup_old_pdfs(days=7)
+            logger.info(f"[SHUTDOWN] 🧹 清理了 {cleaned} 个旧PDF文件")
+        except Exception as e:
+            logger.warning(f"[SHUTDOWN] ⚠️ 清理PDF文件失败: {e}")
+    
     logger.info("[SHUTDOWN] 💾 保存系统状态...")
     logger.info("[SHUTDOWN] ✅ 系统已安全关闭")
 
@@ -413,13 +614,15 @@ async def industrial_not_found_handler(request, exc):
     """工业级404处理"""
     logger.warning(f"[404] 未找到资源: {request.url.path}")
     
-    available_endpoints = ["/", "/health", "/docs", "/api/system-monitor"]
+    available_endpoints = ["/", "/health", "/docs", "/api/system-monitor", "/api/network-info"]
     if admin_router:
         available_endpoints.append("/admin/login")
     if ocr_router:
         available_endpoints.append("/ocr/table")
     if face_router:
         available_endpoints.append("/face/register")
+    if approval_router:
+        available_endpoints.extend(["/approval/test", "/approval/submit_report"])
     
     return JSONResponse(
         status_code=404,
@@ -428,6 +631,11 @@ async def industrial_not_found_handler(request, exc):
             "path": str(request.url.path),
             "system": "TianMu工业AGI试验台",
             "available_endpoints": available_endpoints,
+            "network_info": {
+                "lan_access": True,
+                "primary_ip": get_local_ip(),
+                "all_access_urls": [f"http://{ip}:8000" for ip in get_all_local_ips()]
+            },
             "timestamp": datetime.now().isoformat()
         }
     )
@@ -450,31 +658,64 @@ async def industrial_server_error_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
     
-    print("🏭 " + "="*58 + " 🏭")
-    print("🚀 启动TianMu工业级AGI试验台")
-    print("🏭 " + "="*58 + " 🏭")
-    print()
-    print("🌐 工业控制台: http://127.0.0.1:8000")
-    if admin_router:
-        print("🧠 AGI控制中心: http://127.0.0.1:8000/admin/login")
-        print("🔑 管理密码: tianmu2025")
-    if ocr_router:
-        print("📊 OCR接口: http://127.0.0.1:8000/ocr/table")
-    if face_router:
-        print("🔒 生物识别: http://127.0.0.1:8000/face/register")
-    print("📚 系统文档: http://127.0.0.1:8000/docs")
-    print("🔍 健康监控: http://127.0.0.1:8000/health")
-    print("📊 系统监控: http://127.0.0.1:8000/api/system-monitor")
-    print()
-    print("💡 确保工业界面文件存在: app/static/index.html")
-    print("🏭 " + "="*58 + " 🏭")
+    # 获取网络信息
+    local_ips = get_all_local_ips()
+    primary_ip = get_local_ip()
+    hostname = socket.gethostname()
     
-    # 修复reload警告的运行方式
+    # 查找可用端口
+    try:
+        port = find_available_port()
+    except RuntimeError:
+        port = 8000
+        print("⚠️ 无法找到可用端口，使用默认端口8000（可能被占用）")
+    
+    print("🏭 " + "="*70 + " 🏭")
+    print("🚀 启动TianMu工业级AGI试验台 - 局域网版本")
+    print("🏭 " + "="*70 + " 🏭")
+    print()
+    print(f"🖥️  主机信息: {hostname}")
+    print(f"🌐 主IP地址: {primary_ip}")
+    print(f"📡 服务端口: {port}")
+    print()
+    print("🔗 局域网访问地址:")
+    for ip in local_ips:
+        print(f"   http://{ip}:{port}")
+    print()
+    print("📋 可用服务:")
+    print(f"   🌐 工业控制台: http://{primary_ip}:{port}")
+    if admin_router:
+        print(f"   🧠 AGI控制中心: http://{primary_ip}:{port}/admin/login")
+        print(f"   🔑 管理密码: tianmu2025")
+    if ocr_router:
+        print(f"   📊 OCR接口: http://{primary_ip}:{port}/ocr/table")
+    if face_router:
+        print(f"   🔒 生物识别: http://{primary_ip}:{port}/face/register")
+    if approval_router:
+        print(f"   📋 实验审批: http://{primary_ip}:{port}/approval/test")
+    print(f"   📚 系统文档: http://{primary_ip}:{port}/docs")
+    print(f"   🔍 健康监控: http://{primary_ip}:{port}/health")
+    print(f"   📊 系统监控: http://{primary_ip}:{port}/api/system-monitor")
+    print(f"   🌐 网络信息: http://{primary_ip}:{port}/api/network-info")
+    if approval_router:
+        print(f"   📈 审批统计: http://{primary_ip}:{port}/api/approval-stats")
+    print()
+    print("💡 局域网配置说明:")
+    print("   • 服务绑定到 0.0.0.0，局域网内所有设备可访问")
+    print("   • 确保防火墙允许端口访问")
+    print("   • 审批系统仅限内网IP访问，安全可靠")
+    print("   • 支持手机、平板、电脑等多设备访问")
+    print()
+    print("🏭 " + "="*70 + " 🏭")
+    
+    # 启动服务器 - 绑定到所有接口
     uvicorn.run(
-        "app.main:app",  # 使用导入字符串而不是app对象
-        host="127.0.0.1",
-        port=8000,
-        reload=False,  # 暂时禁用reload避免问题
+        "app.main:app",
+        host="0.0.0.0",        # 关键：绑定到所有网络接口
+        port=port,
+        reload=False,          # 生产环境禁用reload
         log_level="info",
-        access_log=True
+        access_log=True,
+        server_header=False,   # 隐藏服务器头信息
+        date_header=False      # 隐藏日期头信息
     )

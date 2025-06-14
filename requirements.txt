@@ -16,6 +16,14 @@ pillow==11.2.1
 numpy==1.23.5
 dlib==19.24.1
 
+# 报告审批
+reportlab>=3.6.0      # PDF生成
+jinja2>=3.1.0         # HTML模板
+# 邮件验证支持 (新增)
+"pydantic[email]"
+"qrcode[pil]"
+email-validator==2.3.0
+
 # 管理后台相关
 python-jose[cryptography]==3.3.0  # JWT token处理
 python-multipart==0.0.20  # 表单数据处理
