@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TianMu智能服务器 - 管理后台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e1e5e9;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            opacity: 0.7;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+        }
+
+        .tab-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-right: 1px solid #e1e5e9;
+        }
+
+        .tab:last-child {
+            border-right: none;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            padding: 1.5rem;
+            min-height: 400px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .filter-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-section h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+
+        .system-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🚀 TianMu智能服务器管理后台</h1>
+        <div class="navbar-actions">
+            <div class="user-info">
+                <span>👤</span>
+                <span>管理员</span>
+            </div>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">今日请求数</span>
+                    <span class="card-icon">📊</span>
+                </div>
+                <div class="stat-number" id="todayRequests">-</div>
+                <div class="stat-label">24小时内的总请求</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">成功率</span>
+                    <span class="card-icon">✅</span>
+                </div>
+                <div class="stat-number" id="successRate">-</div>
+                <div class="stat-label">请求成功率</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">平均响应时间</span>
+                    <span class="card-icon">⚡</span>
+                </div>
+                <div class="stat-number" id="avgResponseTime">-</div>
+                <div class="stat-label">毫秒</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">总文件大小</span>
+                    <span class="card-icon">💾</span>
+                </div>
+                <div class="stat-number" id="totalFileSize">-</div>
+                <div class="stat-label">今日上传总量</div>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('usage')">📈 使用记录</div>
+                <div class="tab" onclick="showTab('system')">🖥️ 系统信息</div>
+                <div class="tab" onclick="showTab('agi')">🤖 AGI配置</div>
+                <div class="tab" onclick="showTab('settings')">⚙️ 系统设置</div>
+            </div>
+
+            <div class="tab-content">
+                <!-- 使用记录 -->
+                <div id="usage" class="tab-pane active">
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label>服务类型</label>
+                            <select class="filter-input" id="serviceFilter">
+                                <option value="">全部服务</option>
+                                <option value="ocr">OCR识别</option>
+                                <option value="face_recognition">人脸识别</option>
+                                <option value="face_register">人脸注册</option>
+                                <option value="face_verify">人脸验证</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>开始日期</label>
+                            <input type="date" class="filter-input" id="startDate">
+                        </div>
+                        <div class="filter-group">
+                            <label>结束日期</label>
+                            <input type="date" class="filter-input" id="endDate">
+                        </div>
+                        <div class="filter-group">
+                            <label>&nbsp;</label>
+                            <button class="btn" onclick="loadUsageRecords()">查询</button>
+                        </div>
+                        <div class="filter-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-secondary" onclick="exportRecords()">导出</button>
+                        </div>
+                    </div>
+
+                    <div id="usageRecordsContainer">
+                        <div class="loading">正在加载使用记录...</div>
+                    </div>
+                </div>
+
+                <!-- 系统信息 -->
+                <div id="system" class="tab-pane">
+                    <div id="systemInfoContainer">
+                        <div class="loading">正在加载系统信息...</div>
+                    </div>
+                </div>
+
+                <!-- AGI配置 -->
+                <div id="agi" class="tab-pane">
+                    <div class="settings-section">
+                        <h3>🤖 LangChain配置</h3>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="langchainEnabled">
+                                    <span class="slider"></span>
+                                </div>
+                                启用LangChain
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>模型选择</label>
+                            <select class="form-control" id="langchainModel">
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                <option value="local-llm">本地模型</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>API密钥</label>
+                            <input type="password" class="form-control" id="langchainApiKey" placeholder="输入API密钥">
+                        </div>
+                        <div class="form-group">
+                            <label>温度参数</label>
+                            <input type="range" class="form-control" id="langchainTemperature" min="0" max="1" step="0.1" value="0.7">
+                            <span id="temperatureValue">0.7</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔧 MCP工具配置</h3>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="mcpEnabled">
+                                    <span class="slider"></span>
+                                </div>
+                                启用MCP工具
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>工具服务器配置</label>
+                            <textarea class="form-control" id="mcpConfig" rows="6" placeholder="MCP服务器配置JSON...">
+{
+  "servers": [
+    {
+      "name": "filesystem",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"]
+    }
+  ]
+}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>✨ 智能功能</h3>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="autoRespond">
+                                    <span class="slider"></span>
+                                </div>
+                                智能自动回复
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="knowledgeBase">
+                                    <span class="slider"></span>
+                                </div>
+                                知识库集成
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="functionCalling">
+                                    <span class="slider"></span>
+                                </div>
+                                函数调用功能
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn" onclick="saveAgiConfig()">保存AGI配置</button>
+                </div>
+
+                <!-- 系统设置 -->
+                <div id="settings" class="tab-pane">
+                    <div class="settings-section">
+                        <h3>🔐 安全设置</h3>
+                        <div class="form-group">
+                            <label>管理员密码</label>
+                            <input type="password" class="form-control" placeholder="输入新密码以修改">
+                        </div>
+                        <div class="form-group">
+                            <label>会话超时时间（小时）</label>
+                            <input type="number" class="form-control" value="8" min="1" max="24">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>📊 数据管理</h3>
+                        <div class="form-group">
+                            <label>使用记录保留天数</label>
+                            <input type="number" class="form-control" value="30" min="1" max="365">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-secondary" onclick="clearOldRecords()">清理旧记录</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔔 通知设置</h3>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox">
+                                    <span class="slider"></span>
+                                </div>
+                                错误通知
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox">
+                                    <span class="slider"></span>
+                                </div>
+                                性能监控
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn" onclick="saveSettings()">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let authToken = localStorage.getItem('admin_token');
+        let currentTab = 'usage';
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadStatistics();
+            loadUsageRecords();
+            
+            // 设置温度参数显示
+            const tempSlider = document.getElementById('langchainTemperature');
+            const tempValue = document.getElementById('temperatureValue');
+            tempSlider.addEventListener('input', function() {
+                tempValue.textContent = this.value;
+            });
+            
+            // 每30秒刷新统计数据
+            setInterval(loadStatistics, 30000);
+        });
+
+        // 检查认证状态
+        function checkAuth() {
+            const token = localStorage.getItem('admin_token');
+            const expires = localStorage.getItem('admin_token_expires');
+            
+            if (!token || !expires || Date.now() >= parseInt(expires)) {
+                window.location.href = '/admin/login';
+                return false;
+            }
+            
+            authToken = token;
+            return true;
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_token_expires');
+            window.location.href = '/admin/login';
+        }
+
+        // API请求封装
+        async function apiRequest(url, options = {}) {
+            if (!authToken) {
+                logout();
+                return null;
+            }
+
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const mergedOptions = {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...options.headers
+                }
+            };
+
+            try {
+                const response = await fetch(url, mergedOptions);
+                
+                if (response.status === 401) {
+                    logout();
+                    return null;
+                }
+                
+                return response;
+            } catch (error) {
+                console.error('API请求失败:', error);
+                return null;
+            }
+        }
+
+        // 切换标签页
+        function showTab(tabName) {
+            // 隐藏所有标签页
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // 移除所有标签的active类
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 显示选中的标签页
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // 根据标签页加载相应数据
+            switch(tabName) {
+                case 'system':
+                    loadSystemInfo();
+                    break;
+                case 'agi':
+                    loadAgiConfig();
+                    break;
+            }
+        }
+
+        // 加载统计数据
+        async function loadStatistics() {
+            const response = await apiRequest('/admin/api/statistics');
+            if (!response || !response.ok) return;
+            
+            const stats = await response.json();
+            
+            // 更新统计卡片
+            document.getElementById('todayRequests').textContent = stats.total_requests.toLocaleString();
+            
+            const successRate = stats.total_requests > 0 
+                ? ((stats.success_requests / stats.total_requests) * 100).toFixed(1) + '%'
+                : '100%';
+            document.getElementById('successRate').textContent = successRate;
+            
+            document.getElementById('avgResponseTime').textContent = 
+                (stats.avg_processing_time * 1000).toFixed(0);
+            
+            document.getElementById('totalFileSize').textContent = 
+                formatFileSize(stats.total_file_size);
+        }
+
+        // 加载使用记录
+        async function loadUsageRecords() {
+            const container = document.getElementById('usageRecordsContainer');
+            container.innerHTML = '<div class="loading">正在加载使用记录...</div>';
+            
+            const serviceType = document.getElementById('serviceFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            let url = '/admin/api/usage-records?limit=100';
+            if (serviceType) url += `&service_type=${serviceType}`;
+            if (startDate) url += `&start_date=${startDate}T00:00:00`;
+            if (endDate) url += `&end_date=${endDate}T23:59:59`;
+            
+            const response = await apiRequest(url);
+            if (!response || !response.ok) {
+                container.innerHTML = '<div class="loading">加载失败</div>';
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.records.length === 0) {
+                container.innerHTML = '<div class="loading">暂无记录</div>';
+                return;
+            }
+            
+            // 生成表格
+            let tableHtml = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>服务类型</th>
+                            <th>客户端IP</th>
+                            <th>处理时间</th>
+                            <th>状态</th>
+                            <th>文件大小</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.records.forEach(record => {
+                const statusBadge = record.success 
+                    ? '<span class="status-badge status-success">成功</span>'
+                    : '<span class="status-badge status-error">失败</span>';
+                
+                tableHtml += `
+                    <tr>
+                        <td>${new Date(record.timestamp).toLocaleString()}</td>
+                        <td>${getServiceTypeName(record.service_type)}</td>
+                        <td>${record.client_ip}</td>
+                        <td>${(record.processing_time * 1000).toFixed(0)}ms</td>
+                        <td>${statusBadge}</td>
+                        <td>${record.file_size ? formatFileSize(record.file_size) : '-'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+
+        // 加载系统信息
+        async function loadSystemInfo() {
+            const container = document.getElementById('systemInfoContainer');
+            container.innerHTML = '<div class="loading">正在加载系统信息...</div>';
+            
+            const response = await apiRequest('/admin/api/system-info');
+            if (!response || !response.ok) {
+                container.innerHTML = '<div class="loading">加载失败</div>';
+                return;
+            }
+            
+            const info = await response.json();
+            
+            const systemInfoHtml = `
+                <div class="system-info">
+                    <div class="info-item">
+                        <div class="info-label">操作系统</div>
+                        <div class="info-value">${info.system.platform} ${info.system.platform_release}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">主机名</div>
+                        <div class="info-value">${info.system.hostname}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">处理器架构</div>
+                        <div class="info-value">${info.system.architecture}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">CPU使用率</div>
+                        <div class="info-value">${info.resources.cpu_percent.toFixed(1)}%</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">内存使用率</div>
+                        <div class="info-value">${info.resources.memory.percent.toFixed(1)}%</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">可用内存</div>
+                        <div class="info-value">${formatFileSize(info.resources.memory.available)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">磁盘使用率</div>
+                        <div class="info-value">${info.resources.disk.percent.toFixed(1)}%</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">可用磁盘空间</div>
+                        <div class="info-value">${formatFileSize(info.resources.disk.free)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">应用版本</div>
+                        <div class="info-value">${info.application.version}</div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = systemInfoHtml;
+        }
+
+        // 加载AGI配置
+        async function loadAgiConfig() {
+            const response = await apiRequest('/admin/api/agi-config');
+            if (!response || !response.ok) return;
+            
+            const config = await response.json();
+            
+            // 设置LangChain配置
+            document.getElementById('langchainEnabled').checked = config.langchain.enabled;
+            document.getElementById('langchainModel').value = config.langchain.model;
+            document.getElementById('langchainApiKey').value = config.langchain.api_key === '***' ? '' : config.langchain.api_key;
+            document.getElementById('langchainTemperature').value = config.langchain.temperature;
+            document.getElementById('temperatureValue').textContent = config.langchain.temperature;
+            
+            // 设置MCP配置
+            document.getElementById('mcpEnabled').checked = config.mcp.enabled;
+            document.getElementById('mcpConfig').value = JSON.stringify(config.mcp, null, 2);
+            
+            // 设置功能开关
+            document.getElementById('autoRespond').checked = config.features.auto_respond;
+            document.getElementById('knowledgeBase').checked = config.features.knowledge_base;
+            document.getElementById('functionCalling').checked = config.features.function_calling;
+        }
+
+        // 保存AGI配置
+        async function saveAgiConfig() {
+            const config = {
+                langchain: {
+                    enabled: document.getElementById('langchainEnabled').checked,
+                    model: document.getElementById('langchainModel').value,
+                    api_key: document.getElementById('langchainApiKey').value,
+                    temperature: parseFloat(document.getElementById('langchainTemperature').value),
+                    max_tokens: 4000
+                },
+                mcp: {
+                    enabled: document.getElementById('mcpEnabled').checked,
+                    server_configs: JSON.parse(document.getElementById('mcpConfig').value || '{}')
+                },
+                features: {
+                    auto_respond: document.getElementById('autoRespond').checked,
+                    knowledge_base: document.getElementById('knowledgeBase').checked,
+                    function_calling: document.getElementById('functionCalling').checked
+                }
+            };
+            
+            const response = await apiRequest('/admin/api/agi-config', {
+                method: 'POST',
+                body: JSON.stringify(config)
+            });
+            
+            if (response && response.ok) {
+                alert('AGI配置已保存');
+            } else {
+                alert('保存失败');
+            }
+        }
+
+        // 保存系统设置
+        function saveSettings() {
+            alert('系统设置保存功能开发中');
+        }
+
+        // 清理旧记录
+        function clearOldRecords() {
+            if (confirm('确定要清理旧的使用记录吗？')) {
+                alert('清理功能开发中');
+            }
+        }
+
+        // 导出记录
+        async function exportRecords() {
+            const response = await apiRequest('/admin/api/export-records?format=json');
+            if (!response || !response.ok) {
+                alert('导出失败');
+                return;
+            }
+            
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tianmu_usage_records_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 工具函数
+        function getServiceTypeName(serviceType) {
+            const names = {
+                'ocr': 'OCR识别',
+                'face_recognition': '人脸识别',
+                'face_register': '人脸注册',
+                'face_verify': '人脸验证',
+                'face_detect': '人脸检测',
+                'agi_chat': 'AGI对话',
+                'mcp_tool': 'MCP工具'
+            };
+            return names[serviceType] || serviceType;
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 设置今天的日期为默认值
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('endDate').value = today;
+            
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TianMu智能服务器 - 测试界面</title>
+    <title>TianMu工业AGI试验台 - 智能制造控制中心</title>
     <style>
         * {
             margin: 0;
@@ -11,663 +11,850 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+        :root {
+            --primary-green: #00ff41;
+            --secondary-green: #00cc33;
+            --dark-green: #003d10;
+            --bg-dark: #0a0f0a;
+            --bg-secondary: #1a2f1a;
+            --text-light: #e0ffe0;
+            --text-dim: #90ff90;
+            --border-green: #00ff4180;
+            --glow-green: #00ff4140;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        body {
+            font-family: 'Courier New', Monaco, 'Lucida Console', monospace;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #051505 25%, #0f1f0f 50%, var(--bg-secondary) 75%, #0a2f0a 100%);
+            color: var(--text-light);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* 工业网格背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -2;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* 扫描线效果 */
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-green), transparent);
+            z-index: -1;
+            animation: scanLine 3s linear infinite;
+        }
+
+        @keyframes scanLine {
+            0% { transform: translateY(-2px); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        /* 数据流粒子 */
+        .data-stream {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
             overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 30px;
+        .data-particle {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: var(--primary-green);
+            opacity: 0.6;
+            animation: dataFlow 8s linear infinite;
+        }
+
+        @keyframes dataFlow {
+            0% {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
+        /* 导航栏 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 15, 10, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-green);
+            z-index: 1000;
+            box-shadow: 0 0 20px var(--glow-green);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-shadow: 0 0 10px var(--primary-green);
+            letter-spacing: 2px;
+        }
+
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            font-family: monospace;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--border-green);
+            border-radius: 4px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* 主要内容区域 */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+            position: relative;
+            padding-top: 100px;
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+        .hero-content {
+            max-width: 1000px;
+            padding: 0 2rem;
+            animation: systemBoot 2s ease-out;
         }
 
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+        @keyframes systemBoot {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+                filter: blur(5px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
         }
 
-        .content {
-            padding: 40px;
+        .hero-title {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+            text-shadow: 0 0 20px var(--primary-green);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            animation: textGlow 3s ease-in-out infinite alternate;
         }
 
-        .service-section {
-            margin-bottom: 50px;
-            padding: 30px;
-            border: 2px solid #f0f0f0;
-            border-radius: 15px;
-            background: #fafafa;
+        @keyframes textGlow {
+            from { text-shadow: 0 0 20px var(--primary-green); }
+            to { text-shadow: 0 0 30px var(--primary-green), 0 0 40px var(--secondary-green); }
         }
 
-        .service-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #4CAF50;
-            display: inline-block;
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            font-family: 'Courier New', monospace;
         }
 
-        .upload-area {
-            border: 3px dashed #4CAF50;
-            border-radius: 10px;
-            padding: 40px;
+        .hero-description {
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            color: var(--text-light);
+            line-height: 1.8;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* 系统模块 */
+        .modules {
+            padding: 5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .modules-title {
             text-align: center;
-            margin: 20px 0;
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 3rem;
+            color: var(--primary-green);
+            text-shadow: 0 0 15px var(--primary-green);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .module-card {
+            background: rgba(0, 255, 65, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border-green);
+            border-radius: 8px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
             transition: all 0.3s ease;
             cursor: pointer;
         }
 
-        .upload-area:hover {
-            background: #f9f9f9;
-            border-color: #45a049;
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--primary-green), transparent, var(--secondary-green), transparent);
+            z-index: -1;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .upload-area.dragover {
-            background: #e8f5e8;
-            border-color: #2e7d32;
+        .module-card:hover::before {
+            opacity: 1;
         }
 
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px var(--glow-green);
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .module-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .module-icon {
+            font-size: 3rem;
+            margin-right: 1rem;
+            color: var(--primary-green);
+            text-shadow: 0 0 10px var(--primary-green);
+        }
+
+        .module-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            letter-spacing: 1px;
+        }
+
+        .module-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .module-description {
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .module-features {
+            list-style: none;
+        }
+
+        .module-features li {
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+            font-family: monospace;
+        }
+
+        .module-features li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: var(--primary-green);
+        }
+
+        /* 实时监控面板 */
+        .monitoring {
+            padding: 3rem 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 2px solid var(--border-green);
+            border-bottom: 2px solid var(--border-green);
+        }
+
+        .monitoring-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .monitor-item {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--border-green);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .monitor-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+            animation: dataUpdate 4s linear infinite;
+        }
+
+        @keyframes dataUpdate {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .monitor-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .monitor-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* 按钮样式 */
         .btn {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(45deg, var(--dark-green), var(--secondary-green));
+            color: var(--text-light);
+            text-decoration: none;
+            border: 2px solid var(--primary-green);
+            border-radius: 4px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: all 0.3s ease;
-            margin: 10px;
+            margin: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 5px 20px var(--glow-green);
+            text-shadow: 0 0 10px var(--primary-green);
         }
 
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--border-green);
         }
 
-        .input-group {
-            margin: 20px 0;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .input-group input, .input-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .input-group input:focus, .input-group textarea:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-
-        .result-area {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            min-height: 100px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .loading {
+        /* 页脚 */
+        .footer {
+            padding: 2rem;
             text-align: center;
-            color: #666;
-            font-style: italic;
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid var(--border-green);
+            font-family: monospace;
         }
 
-        .success {
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .error {
-            color: #dc3545;
-            font-weight: bold;
-        }
-
-        .preview-image {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 10px;
-            margin: 10px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 30px;
-        }
-
+        /* 响应式设计 */
         @media (max-width: 768px) {
-            .grid {
+            .nav-status {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .modules-grid {
                 grid-template-columns: 1fr;
-                gap: 20px;
             }
             
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .content {
-                padding: 20px;
+            .monitoring-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        .status-indicator {
+        /* 控制台样式 */
+        .console-text {
+            font-family: 'Courier New', monospace;
+            color: var(--primary-green);
+            text-shadow: 0 0 5px var(--primary-green);
+        }
+
+        /* 数据传输指示器 */
+        .data-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
+            background: var(--primary-green);
             border-radius: 50%;
-            margin-right: 8px;
+            margin-left: 0.5rem;
+            animation: dataTransfer 1s ease-in-out infinite;
         }
 
-        .status-online {
-            background: #28a745;
-        }
-
-        .status-offline {
-            background: #dc3545;
-        }
-
-        .face-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 20px 0;
+        @keyframes dataTransfer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>TianMu智能服务器</h1>
-            <p>OCR文字识别 & 人脸识别测试平台</p>
-            <div id="status">
-                <span class="status-indicator status-offline"></span>
-                <span>检查服务状态中...</span>
-            </div>
-        </div>
+    <!-- 扫描线效果 -->
+    <div class="scan-line"></div>
 
-        <div class="content">
-            <div class="grid">
-                <!-- OCR服务测试 -->
-                <div class="service-section">
-                    <h2>📋 OCR表格识别</h2>
-                    <div class="upload-area" id="ocrUploadArea">
-                        <p>📁 拖拽图片到此处或点击上传</p>
-                        <p style="font-size: 14px; color: #666; margin-top: 10px;">
-                            支持格式: PNG, JPG, JPEG, BMP
-                        </p>
-                        <input type="file" id="ocrFileInput" accept="image/*" style="display: none;">
-                    </div>
-                    <div id="ocrPreview"></div>
-                    <button class="btn" id="ocrSubmitBtn" disabled>开始识别</button>
-                    <div class="result-area" id="ocrResult">
-                        <p style="color: #666;">等待上传图片...</p>
-                    </div>
+    <!-- 数据流粒子 -->
+    <div class="data-stream" id="dataStream"></div>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">⚡ TIANMU AGI-LAB</div>
+            <div class="nav-status">
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span id="systemStatus">SYSTEM ONLINE</span>
                 </div>
-
-                <!-- 人脸识别服务测试 -->
-                <div class="service-section">
-                    <h2>👤 人脸识别服务</h2>
-                    
-                    <!-- 人脸注册 -->
-                    <h3>人脸注册</h3>
-                    <div class="input-group">
-                        <label>用户ID:</label>
-                        <input type="number" id="registerUserId" placeholder="输入用户ID">
-                    </div>
-                    <div class="input-group">
-                        <label>用户名:</label>
-                        <input type="text" id="registerUsername" placeholder="输入用户名">
-                    </div>
-                    <div class="upload-area" id="faceRegisterUploadArea">
-                        <p>📷 上传人脸照片</p>
-                        <input type="file" id="faceRegisterInput" accept="image/*" style="display: none;">
-                    </div>
-                    <div id="faceRegisterPreview"></div>
-                    <button class="btn" id="faceRegisterBtn" disabled>注册人脸</button>
-                    <div class="result-area" id="faceRegisterResult">
-                        <p style="color: #666;">等待输入信息...</p>
-                    </div>
-
-                    <!-- 人脸识别 -->
-                    <h3 style="margin-top: 30px;">人脸识别</h3>
-                    <div class="input-group">
-                        <label>预期用户ID (可选):</label>
-                        <input type="number" id="recognizeUserId" placeholder="输入预期用户ID">
-                    </div>
-                    <div class="upload-area" id="faceRecognizeUploadArea">
-                        <p>📷 上传待识别人脸</p>
-                        <input type="file" id="faceRecognizeInput" accept="image/*" style="display: none;">
-                    </div>
-                    <div id="faceRecognizePreview"></div>
-                    <div class="face-actions">
-                        <button class="btn" id="faceRecognizeBtn" disabled>识别人脸</button>
-                        <button class="btn" id="faceDetectBtn" disabled>仅检测人脸</button>
-                    </div>
-                    <div class="result-area" id="faceRecognizeResult">
-                        <p style="color: #666;">等待上传图片...</p>
-                    </div>
-
-                    <!-- 人脸管理 -->
-                    <h3 style="margin-top: 30px;">人脸管理</h3>
-                    <div class="input-group">
-                        <label>用户ID:</label>
-                        <input type="number" id="manageUserId" placeholder="输入用户ID">
-                    </div>
-                    <div class="face-actions">
-                        <button class="btn" id="getUserInfoBtn">查询用户信息</button>
-                        <button class="btn" id="deleteFaceBtn" style="background: #dc3545;">删除人脸数据</button>
-                        <button class="btn" id="reloadCacheBtn">重载缓存</button>
-                    </div>
-                    <div class="result-area" id="faceManageResult">
-                        <p style="color: #666;">等待操作...</p>
-                    </div>
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span id="connectionStatus">HOST CONNECTED</span>
+                </div>
+                <div class="status-item console-text">
+                    <span>SESSION: </span>
+                    <span id="sessionTime">00:00:00</span>
                 </div>
             </div>
         </div>
-    </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">INDUSTRIAL AGI LAB</h1>
+            <p class="hero-subtitle">NEXT-GEN MANUFACTURING INTELLIGENCE PLATFORM</p>
+            <p class="hero-description">
+                先进的工业级人工智能试验台，集成OCR识别、计算机视觉、智能分析于一体。
+                专为工业制造环境设计，支持上位机数据交互，提供实时监控和智能决策支持。
+                构建未来智能工厂的核心大脑系统。
+            </p>
+            <div>
+                <a href="#modules" class="btn">EXPLORE MODULES</a>
+                <a href="/admin/login" class="btn btn-secondary">ACCESS CONTROL</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 系统模块 -->
+    <section class="modules" id="modules">
+        <h2 class="modules-title">SYSTEM MODULES</h2>
+        <div class="modules-grid">
+            <div class="module-card" onclick="window.open('/docs#/OCR', '_blank')">
+                <div class="module-header">
+                    <span class="module-icon">📊</span>
+                    <div>
+                        <h3 class="module-title">OCR ANALYSIS ENGINE</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: ACTIVE</span>
+                            <span class="data-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    高精度光学字符识别引擎，专为工业表格和仪表数据提取优化。支持实时参数识别和批量数据处理。
+                </p>
+                <ul class="module-features">
+                    <li>工业仪表数据提取</li>
+                    <li>生产报表智能识别</li>
+                    <li>质检数据自动录入</li>
+                    <li>多格式文档解析</li>
+                </ul>
+            </div>
+
+            <div class="module-card" onclick="window.open('/docs#/Face%20Recognition', '_blank')">
+                <div class="module-header">
+                    <span class="module-icon">🔒</span>
+                    <div>
+                        <h3 class="module-title">BIOMETRIC SECURITY</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: MONITORING</span>
+                            <span class="data-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    工业级生物识别安全系统，确保关键设备和区域的访问控制。支持多重身份验证和实时监控。
+                </p>
+                <ul class="module-features">
+                    <li>操作员身份验证</li>
+                    <li>危险区域准入控制</li>
+                    <li>设备操作权限管理</li>
+                    <li>安全事件实时告警</li>
+                </ul>
+            </div>
+
+            <div class="module-card" onclick="window.open('/admin/login', '_blank')">
+                <div class="module-header">
+                    <span class="module-icon">🧠</span>
+                    <div>
+                        <h3 class="module-title">AGI CONTROL CENTER</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: LEARNING</span>
+                            <span class="data-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    人工通用智能控制中心，整合多源数据进行智能分析和决策支持。为工业4.0提供核心智能驱动。
+                </p>
+                <ul class="module-features">
+                    <li>生产数据智能分析</li>
+                    <li>预测性维护建议</li>
+                    <li>质量控制优化</li>
+                    <li>实时决策支持</li>
+                </ul>
+            </div>
+
+            <div class="module-card" onclick="showHostInterface()">
+                <div class="module-header">
+                    <span class="module-icon">🔗</span>
+                    <div>
+                        <h3 class="module-title">HOST INTERFACE</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: STANDBY</span>
+                            <span class="data-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    上位机通信接口，支持多种工业协议和数据格式。实现与现有生产系统的无缝集成。
+                </p>
+                <ul class="module-features">
+                    <li>Modbus/TCP 协议支持</li>
+                    <li>OPC UA 数据交换</li>
+                    <li>实时数据采集</li>
+                    <li>设备状态监控</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 实时监控面板 -->
+    <section class="monitoring">
+        <h2 class="monitoring-title">REAL-TIME MONITORING</h2>
+        <div class="monitoring-grid">
+            <div class="monitor-item">
+                <div class="monitor-value" id="totalProcessed">-</div>
+                <div class="monitor-label">Total Processed</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="systemEfficiency">-</div>
+                <div class="monitor-label">System Efficiency</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="responseTime">-</div>
+                <div class="monitor-label">Response Time</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="dataVolume">-</div>
+                <div class="monitor-label">Data Volume</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="cpuUsage">-</div>
+                <div class="monitor-label">CPU Usage</div>
+            </div>
+            <div class="monitor-item">
+                <div class="monitor-value" id="memoryUsage">-</div>
+                <div class="monitor-label">Memory Usage</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>&copy; 2025 TianMu Industrial AGI Laboratory. Advanced Manufacturing Intelligence Platform.</p>
+        <p style="margin-top: 0.5rem; color: var(--text-dim);">
+            <a href="/docs" style="color: var(--primary-green); text-decoration: none;">API DOCS</a> | 
+            <a href="/admin/login" style="color: var(--primary-green); text-decoration: none;">CONTROL CENTER</a> | 
+            <a href="/health" style="color: var(--primary-green); text-decoration: none;">SYSTEM HEALTH</a>
+        </p>
+    </footer>
 
     <script>
-        const API_BASE = '';  // 当前域名下的API
+        // 创建数据流粒子
+        function createDataStream() {
+            const dataStream = document.getElementById('dataStream');
+            const particleCount = 30;
 
-        // 检查服务状态
-        async function checkServiceStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/health`);
-                const data = await response.json();
-                const statusEl = document.getElementById('status');
-                if (response.ok) {
-                    statusEl.innerHTML = '<span class="status-indicator status-online"></span><span>服务在线</span>';
-                } else {
-                    statusEl.innerHTML = '<span class="status-indicator status-offline"></span><span>服务异常</span>';
-                }
-            } catch (error) {
-                const statusEl = document.getElementById('status');
-                statusEl.innerHTML = '<span class="status-indicator status-offline"></span><span>服务离线</span>';
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'data-particle';
+                
+                const startX = Math.random() * window.innerWidth;
+                const delay = Math.random() * 8;
+                const duration = Math.random() * 4 + 6;
+                
+                particle.style.left = startX + 'px';
+                particle.style.animationDelay = delay + 's';
+                particle.style.animationDuration = duration + 's';
+                
+                dataStream.appendChild(particle);
             }
         }
 
-        // 工具函数
-        function setupFileUpload(uploadAreaId, fileInputId, previewId, submitBtnId = null) {
-            const uploadArea = document.getElementById(uploadAreaId);
-            const fileInput = document.getElementById(fileInputId);
-            const preview = document.getElementById(previewId);
-            const submitBtn = submitBtnId ? document.getElementById(submitBtnId) : null;
+        // 更新会话时间
+        let sessionStart = Date.now();
+        function updateSessionTime() {
+            const elapsed = Date.now() - sessionStart;
+            const hours = Math.floor(elapsed / 3600000).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsed % 3600000) / 60000).toString().padStart(2, '0');
+            const seconds = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+            document.getElementById('sessionTime').textContent = `${hours}:${minutes}:${seconds}`;
+        }
 
-            uploadArea.addEventListener('click', () => fileInput.click());
-            
-            uploadArea.addEventListener('dragover', (e) => {
+        // 加载系统监控数据
+        async function loadMonitoringData() {
+            try {
+                // 系统健康状况
+                const healthResponse = await fetch('/health');
+                if (healthResponse.ok) {
+                    document.getElementById('systemStatus').textContent = 'SYSTEM ONLINE';
+                    document.getElementById('connectionStatus').textContent = 'HOST CONNECTED';
+                } else {
+                    document.getElementById('systemStatus').textContent = 'SYSTEM ERROR';
+                    document.getElementById('connectionStatus').textContent = 'HOST DISCONNECTED';
+                }
+
+                // 统计数据
+                const statsResponse = await fetch('/api/public-stats');
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('totalProcessed').textContent = (stats.total_requests || 0).toLocaleString();
+                    document.getElementById('systemEfficiency').textContent = (stats.success_rate || 100).toFixed(1) + '%';
+                    document.getElementById('responseTime').textContent = ((stats.avg_time || 0) * 1000).toFixed(0) + 'ms';
+                    document.getElementById('dataVolume').textContent = formatDataSize(stats.total_requests * 1024 || 0);
+                }
+
+                // 系统资源信息
+                const systemResponse = await fetch('/api/system-monitor');
+                if (systemResponse.ok) {
+                    const system = await systemResponse.json();
+                    document.getElementById('cpuUsage').textContent = (system.cpu_percent || 0).toFixed(1) + '%';
+                    document.getElementById('memoryUsage').textContent = (system.memory_percent || 0).toFixed(1) + '%';
+                }
+
+            } catch (error) {
+                console.error('监控数据加载失败:', error);
+                document.getElementById('systemStatus').textContent = 'SYSTEM OFFLINE';
+                document.getElementById('connectionStatus').textContent = 'HOST DISCONNECTED';
+            }
+        }
+
+        // 格式化数据大小
+        function formatDataSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+        }
+
+        // 显示上位机接口信息
+        function showHostInterface() {
+            alert(`上位机接口模块\n\n支持协议:\n• Modbus TCP/IP\n• OPC UA\n• HTTP/HTTPS API\n• WebSocket实时通信\n\n数据格式:\n• JSON\n• XML\n• Binary\n\n状态: 待连接`);
+        }
+
+        // 平滑滚动
+        function smoothScroll(target) {
+            const element = document.querySelector(target);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
+
+        // 添加点击事件监听
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
                 e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    handleFileSelect(files[0], preview, submitBtn);
-                }
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileSelect(e.target.files[0], preview, submitBtn);
-                }
-            });
-        }
-
-        function handleFileSelect(file, preview, submitBtn) {
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="预览图片">`;
-                    if (submitBtn) submitBtn.disabled = false;
-                };
-                reader.readAsDataURL(file);
+                smoothScroll(e.target.getAttribute('href'));
             }
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function showResult(elementId, content, type = 'info') {
-            const element = document.getElementById(elementId);
-            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
-            element.innerHTML = `<div class="${className}">${content}</div>`;
-        }
-
-        function showLoading(elementId, message = '处理中...') {
-            const element = document.getElementById(elementId);
-            element.innerHTML = `<div class="loading">${message}</div>`;
-        }
-
-        // OCR功能
-        async function performOCR() {
-            const fileInput = document.getElementById('ocrFileInput');
-            if (!fileInput.files.length) return;
-
-            const file = fileInput.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
-
-            showLoading('ocrResult', 'OCR识别中...');
-
-            try {
-                const response = await fetch(`${API_BASE}/ocr/table`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                
-                if (response.ok) {
-                    let resultHtml = '<h4>识别结果:</h4>';
-                    if (Object.keys(data.parameters).length > 0) {
-                        resultHtml += '<table style="width: 100%; border-collapse: collapse;">';
-                        for (const [key, value] of Object.entries(data.parameters)) {
-                            resultHtml += `
-                                <tr style="border-bottom: 1px solid #ddd;">
-                                    <td style="padding: 8px; font-weight: bold;">${key}</td>
-                                    <td style="padding: 8px;">${value}</td>
-                                </tr>
-                            `;
-                        }
-                        resultHtml += '</table>';
-                    } else {
-                        resultHtml += '<p>未识别到表格参数</p>';
-                    }
-                    showResult('ocrResult', resultHtml, 'success');
-                } else {
-                    showResult('ocrResult', `识别失败: ${data.detail || '未知错误'}`, 'error');
-                }
-            } catch (error) {
-                showResult('ocrResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 人脸注册
-        async function registerFace() {
-            const userId = document.getElementById('registerUserId').value;
-            const username = document.getElementById('registerUsername').value;
-            const fileInput = document.getElementById('faceRegisterInput');
-
-            if (!userId || !username || !fileInput.files.length) {
-                showResult('faceRegisterResult', '请填写完整信息并上传照片', 'error');
-                return;
-            }
-
-            showLoading('faceRegisterResult', '注册中...');
-
-            try {
-                const base64 = await fileToBase64(fileInput.files[0]);
-                
-                const response = await fetch(`${API_BASE}/face/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: parseInt(userId),
-                        username: username,
-                        image_base64: base64
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showResult('faceRegisterResult', `注册成功: ${data.message}`, 'success');
-                } else {
-                    showResult('faceRegisterResult', `注册失败: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceRegisterResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 人脸识别
-        async function recognizeFace() {
-            const fileInput = document.getElementById('faceRecognizeInput');
-            const userId = document.getElementById('recognizeUserId').value;
-
-            if (!fileInput.files.length) {
-                showResult('faceRecognizeResult', '请上传待识别的人脸图片', 'error');
-                return;
-            }
-
-            showLoading('faceRecognizeResult', '识别中...');
-
-            try {
-                const base64 = await fileToBase64(fileInput.files[0]);
-                
-                const requestData = { image_base64: base64 };
-                if (userId) requestData.expected_user_id = parseInt(userId);
-
-                const response = await fetch(`${API_BASE}/face/recognize`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData)
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    const resultHtml = `
-                        <h4>识别成功</h4>
-                        <p><strong>用户ID:</strong> ${data.user_id}</p>
-                        <p><strong>用户名:</strong> ${data.username}</p>
-                        <p><strong>置信度:</strong> ${(data.confidence * 100).toFixed(2)}%</p>
-                        <p><strong>识别时间:</strong> ${new Date(data.recognition_time).toLocaleString()}</p>
-                    `;
-                    showResult('faceRecognizeResult', resultHtml, 'success');
-                } else {
-                    showResult('faceRecognizeResult', `识别失败: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceRecognizeResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 人脸检测
-        async function detectFaces() {
-            const fileInput = document.getElementById('faceRecognizeInput');
-
-            if (!fileInput.files.length) {
-                showResult('faceRecognizeResult', '请上传图片', 'error');
-                return;
-            }
-
-            showLoading('faceRecognizeResult', '检测中...');
-
-            try {
-                const base64 = await fileToBase64(fileInput.files[0]);
-                
-                const response = await fetch(`${API_BASE}/face/detect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image_base64: base64 })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showResult('faceRecognizeResult', `检测成功: 发现 ${data.face_count} 个人脸`, 'success');
-                } else {
-                    showResult('faceRecognizeResult', `检测失败: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceRecognizeResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 获取用户信息
-        async function getUserInfo() {
-            const userId = document.getElementById('manageUserId').value;
-            if (!userId) {
-                showResult('faceManageResult', '请输入用户ID', 'error');
-                return;
-            }
-
-            showLoading('faceManageResult', '查询中...');
-
-            try {
-                const response = await fetch(`${API_BASE}/face/user/${userId}/info`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const resultHtml = `
-                        <h4>用户信息</h4>
-                        <p><strong>用户ID:</strong> ${data.user_id}</p>
-                        <p><strong>用户名:</strong> ${data.username}</p>
-                        <p><strong>已注册人脸:</strong> ${data.has_face_registered ? '是' : '否'}</p>
-                        <p><strong>注册时间:</strong> ${data.face_registered_time ? new Date(data.face_registered_time).toLocaleString() : '未注册'}</p>
-                        <p><strong>数据版本:</strong> ${data.face_data_version || '无'}</p>
-                    `;
-                    showResult('faceManageResult', resultHtml, 'success');
-                } else {
-                    const error = await response.json();
-                    showResult('faceManageResult', `查询失败: ${error.detail}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 删除人脸数据
-        async function deleteFaceData() {
-            const userId = document.getElementById('manageUserId').value;
-            if (!userId) {
-                showResult('faceManageResult', '请输入用户ID', 'error');
-                return;
-            }
-
-            if (!confirm(`确定要删除用户 ${userId} 的人脸数据吗？`)) return;
-
-            showLoading('faceManageResult', '删除中...');
-
-            try {
-                const response = await fetch(`${API_BASE}/face/user/${userId}/face`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showResult('faceManageResult', `删除成功: ${data.message}`, 'success');
-                } else {
-                    showResult('faceManageResult', `删除失败: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
-
-        // 重载缓存
-        async function reloadCache() {
-            showLoading('faceManageResult', '重载中...');
-
-            try {
-                const response = await fetch(`${API_BASE}/face/reload-cache`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showResult('faceManageResult', `重载成功: ${data.message}`, 'success');
-                } else {
-                    showResult('faceManageResult', `重载失败: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
-            }
-        }
+        });
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            // 检查服务状态
-            checkServiceStatus();
-            setInterval(checkServiceStatus, 30000); // 每30秒检查一次
-
-            // 设置文件上传
-            setupFileUpload('ocrUploadArea', 'ocrFileInput', 'ocrPreview', 'ocrSubmitBtn');
-            setupFileUpload('faceRegisterUploadArea', 'faceRegisterInput', 'faceRegisterPreview', 'faceRegisterBtn');
-            setupFileUpload('faceRecognizeUploadArea', 'faceRecognizeInput', 'faceRecognizePreview', 'faceRecognizeBtn');
-
-            // 绑定事件
-            document.getElementById('ocrSubmitBtn').addEventListener('click', performOCR);
-            document.getElementById('faceRegisterBtn').addEventListener('click', registerFace);
-            document.getElementById('faceRecognizeBtn').addEventListener('click', recognizeFace);
-            document.getElementById('faceDetectBtn').addEventListener('click', detectFaces);
-            document.getElementById('getUserInfoBtn').addEventListener('click', getUserInfo);
-            document.getElementById('deleteFaceBtn').addEventListener('click', deleteFaceData);
-            document.getElementById('reloadCacheBtn').addEventListener('click', reloadCache);
-
-            // 监听输入变化
-            ['registerUserId', 'registerUsername'].forEach(id => {
-                document.getElementById(id).addEventListener('input', () => {
-                    const userId = document.getElementById('registerUserId').value;
-                    const username = document.getElementById('registerUsername').value;
-                    const hasFile = document.getElementById('faceRegisterInput').files.length > 0;
-                    document.getElementById('faceRegisterBtn').disabled = !(userId && username && hasFile);
+        document.addEventListener('DOMContentLoaded', function() {
+            createDataStream();
+            loadMonitoringData();
+            
+            // 更新会话时间
+            setInterval(updateSessionTime, 1000);
+            
+            // 每10秒更新监控数据
+            setInterval(loadMonitoringData, 10000);
+            
+            // 初始化监控值显示
+            const monitorValues = document.querySelectorAll('.monitor-value');
+            monitorValues.forEach(value => {
+                if (value.textContent === '-') {
+                    value.style.opacity = '0.5';
+                }
+            });
+            
+            // 2秒后恢复正常显示
+            setTimeout(() => {
+                monitorValues.forEach(value => {
+                    value.style.opacity = '1';
                 });
-            });
-
-            // 检测按钮状态更新
-            document.getElementById('faceRecognizeInput').addEventListener('change', () => {
-                const hasFile = document.getElementById('faceRecognizeInput').files.length > 0;
-                document.getElementById('faceDetectBtn').disabled = !hasFile;
-            });
+            }, 2000);
         });
+
+        // 窗口大小改变时重新创建粒子
+        window.addEventListener('resize', function() {
+            const dataStream = document.getElementById('dataStream');
+            dataStream.innerHTML = '';
+            createDataStream();
+        });
+
+        // 模拟实时数据更新
+        function simulateDataUpdate() {
+            const updateElements = [
+                'totalProcessed',
+                'systemEfficiency', 
+                'responseTime',
+                'dataVolume',
+                'cpuUsage',
+                'memoryUsage'
+            ];
+            
+            updateElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element && element.textContent !== '-') {
+                    // 添加数据更新闪烁效果
+                    element.style.color = '#ffffff';
+                    element.style.textShadow = '0 0 15px #00ff41';
+                    
+                    setTimeout(() => {
+                        element.style.color = 'var(--primary-green)';
+                        element.style.textShadow = '0 0 10px var(--primary-green)';
+                    }, 200);
+                }
+            });
+        }
+
+        // 每5秒模拟数据更新闪烁
+        setInterval(simulateDataUpdate, 5000);
     </script>
 </body>
 </html>

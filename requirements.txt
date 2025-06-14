@@ -1,15 +1,48 @@
-# requirements.txt
-fastapi
-uvicorn
-paddleocr
-pydantic
+# requirements.txt (更新版本)
+# 核心框架
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.5
+pydantic-settings==2.9.1
 
-# 人脸识别相关依赖
-face-recognition
-opencv-python
-pillow
-numpy
-dlib
+# OCR相关
+paddleocr==2.6
+paddlepaddle==3.0.0
 
+# 人脸识别相关
+face-recognition==1.3.0
+opencv-python==4.11.0.86
+pillow==11.2.1
+numpy==1.23.5
+dlib==19.24.1
 
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# 管理后台相关
+python-jose[cryptography]==3.3.0  # JWT token处理
+python-multipart==0.0.20  # 表单数据处理
+jinja2==3.1.6  # 模板引擎
+aiofiles==24.1.0  # 异步文件操作
+psutil==7.0.0  # 系统信息监控
+
+# 打包相关
+pyinstaller==6.13.0
+
+# 未来AGI功能预留依赖
+# langchain==0.1.0  # 取消注释以启用
+# langchain-openai==0.0.5  # 取消注释以启用
+# langchain-community==0.0.10  # 取消注释以启用
+
+# MCP协议支持 (预留)
+# mcp==1.0.0  # 取消注释以启用
+
+# 数据库支持 (可选)
+# sqlite3 已包含在Python标准库中
+# 如需其他数据库支持，取消注释对应行：
+# pymongo==4.6.0  # MongoDB
+# redis==5.0.1  # Redis
+# asyncpg==0.29.0  # PostgreSQL异步驱动
+
+# 开发工具 (可选)
+# pytest==8.0.0
+# pytest-asyncio==0.23.0
+# black==24.0.0
+# flake8==7.0.0
