@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TianMu智能服务器 - 测试界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .service-section {
+            margin-bottom: 50px;
+            padding: 30px;
+            border: 2px solid #f0f0f0;
+            border-radius: 15px;
+            background: #fafafa;
+        }
+
+        .service-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            display: inline-block;
+        }
+
+        .upload-area {
+            border: 3px dashed #4CAF50;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background: #f9f9f9;
+            border-color: #45a049;
+        }
+
+        .upload-area.dragover {
+            background: #e8f5e8;
+            border-color: #2e7d32;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 10px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        .face-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TianMu智能服务器</h1>
+            <p>OCR文字识别 & 人脸识别测试平台</p>
+            <div id="status">
+                <span class="status-indicator status-offline"></span>
+                <span>检查服务状态中...</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="grid">
+                <!-- OCR服务测试 -->
+                <div class="service-section">
+                    <h2>📋 OCR表格识别</h2>
+                    <div class="upload-area" id="ocrUploadArea">
+                        <p>📁 拖拽图片到此处或点击上传</p>
+                        <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                            支持格式: PNG, JPG, JPEG, BMP
+                        </p>
+                        <input type="file" id="ocrFileInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="ocrPreview"></div>
+                    <button class="btn" id="ocrSubmitBtn" disabled>开始识别</button>
+                    <div class="result-area" id="ocrResult">
+                        <p style="color: #666;">等待上传图片...</p>
+                    </div>
+                </div>
+
+                <!-- 人脸识别服务测试 -->
+                <div class="service-section">
+                    <h2>👤 人脸识别服务</h2>
+                    
+                    <!-- 人脸注册 -->
+                    <h3>人脸注册</h3>
+                    <div class="input-group">
+                        <label>用户ID:</label>
+                        <input type="number" id="registerUserId" placeholder="输入用户ID">
+                    </div>
+                    <div class="input-group">
+                        <label>用户名:</label>
+                        <input type="text" id="registerUsername" placeholder="输入用户名">
+                    </div>
+                    <div class="upload-area" id="faceRegisterUploadArea">
+                        <p>📷 上传人脸照片</p>
+                        <input type="file" id="faceRegisterInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="faceRegisterPreview"></div>
+                    <button class="btn" id="faceRegisterBtn" disabled>注册人脸</button>
+                    <div class="result-area" id="faceRegisterResult">
+                        <p style="color: #666;">等待输入信息...</p>
+                    </div>
+
+                    <!-- 人脸识别 -->
+                    <h3 style="margin-top: 30px;">人脸识别</h3>
+                    <div class="input-group">
+                        <label>预期用户ID (可选):</label>
+                        <input type="number" id="recognizeUserId" placeholder="输入预期用户ID">
+                    </div>
+                    <div class="upload-area" id="faceRecognizeUploadArea">
+                        <p>📷 上传待识别人脸</p>
+                        <input type="file" id="faceRecognizeInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="faceRecognizePreview"></div>
+                    <div class="face-actions">
+                        <button class="btn" id="faceRecognizeBtn" disabled>识别人脸</button>
+                        <button class="btn" id="faceDetectBtn" disabled>仅检测人脸</button>
+                    </div>
+                    <div class="result-area" id="faceRecognizeResult">
+                        <p style="color: #666;">等待上传图片...</p>
+                    </div>
+
+                    <!-- 人脸管理 -->
+                    <h3 style="margin-top: 30px;">人脸管理</h3>
+                    <div class="input-group">
+                        <label>用户ID:</label>
+                        <input type="number" id="manageUserId" placeholder="输入用户ID">
+                    </div>
+                    <div class="face-actions">
+                        <button class="btn" id="getUserInfoBtn">查询用户信息</button>
+                        <button class="btn" id="deleteFaceBtn" style="background: #dc3545;">删除人脸数据</button>
+                        <button class="btn" id="reloadCacheBtn">重载缓存</button>
+                    </div>
+                    <div class="result-area" id="faceManageResult">
+                        <p style="color: #666;">等待操作...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';  // 当前域名下的API
+
+        // 检查服务状态
+        async function checkServiceStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                const statusEl = document.getElementById('status');
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="status-indicator status-online"></span><span>服务在线</span>';
+                } else {
+                    statusEl.innerHTML = '<span class="status-indicator status-offline"></span><span>服务异常</span>';
+                }
+            } catch (error) {
+                const statusEl = document.getElementById('status');
+                statusEl.innerHTML = '<span class="status-indicator status-offline"></span><span>服务离线</span>';
+            }
+        }
+
+        // 工具函数
+        function setupFileUpload(uploadAreaId, fileInputId, previewId, submitBtnId = null) {
+            const uploadArea = document.getElementById(uploadAreaId);
+            const fileInput = document.getElementById(fileInputId);
+            const preview = document.getElementById(previewId);
+            const submitBtn = submitBtnId ? document.getElementById(submitBtnId) : null;
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    handleFileSelect(files[0], preview, submitBtn);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0], preview, submitBtn);
+                }
+            });
+        }
+
+        function handleFileSelect(file, preview, submitBtn) {
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="预览图片">`;
+                    if (submitBtn) submitBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+            element.innerHTML = `<div class="${className}">${content}</div>`;
+        }
+
+        function showLoading(elementId, message = '处理中...') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="loading">${message}</div>`;
+        }
+
+        // OCR功能
+        async function performOCR() {
+            const fileInput = document.getElementById('ocrFileInput');
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoading('ocrResult', 'OCR识别中...');
+
+            try {
+                const response = await fetch(`${API_BASE}/ocr/table`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let resultHtml = '<h4>识别结果:</h4>';
+                    if (Object.keys(data.parameters).length > 0) {
+                        resultHtml += '<table style="width: 100%; border-collapse: collapse;">';
+                        for (const [key, value] of Object.entries(data.parameters)) {
+                            resultHtml += `
+                                <tr style="border-bottom: 1px solid #ddd;">
+                                    <td style="padding: 8px; font-weight: bold;">${key}</td>
+                                    <td style="padding: 8px;">${value}</td>
+                                </tr>
+                            `;
+                        }
+                        resultHtml += '</table>';
+                    } else {
+                        resultHtml += '<p>未识别到表格参数</p>';
+                    }
+                    showResult('ocrResult', resultHtml, 'success');
+                } else {
+                    showResult('ocrResult', `识别失败: ${data.detail || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult('ocrResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 人脸注册
+        async function registerFace() {
+            const userId = document.getElementById('registerUserId').value;
+            const username = document.getElementById('registerUsername').value;
+            const fileInput = document.getElementById('faceRegisterInput');
+
+            if (!userId || !username || !fileInput.files.length) {
+                showResult('faceRegisterResult', '请填写完整信息并上传照片', 'error');
+                return;
+            }
+
+            showLoading('faceRegisterResult', '注册中...');
+
+            try {
+                const base64 = await fileToBase64(fileInput.files[0]);
+                
+                const response = await fetch(`${API_BASE}/face/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        username: username,
+                        image_base64: base64
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('faceRegisterResult', `注册成功: ${data.message}`, 'success');
+                } else {
+                    showResult('faceRegisterResult', `注册失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceRegisterResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 人脸识别
+        async function recognizeFace() {
+            const fileInput = document.getElementById('faceRecognizeInput');
+            const userId = document.getElementById('recognizeUserId').value;
+
+            if (!fileInput.files.length) {
+                showResult('faceRecognizeResult', '请上传待识别的人脸图片', 'error');
+                return;
+            }
+
+            showLoading('faceRecognizeResult', '识别中...');
+
+            try {
+                const base64 = await fileToBase64(fileInput.files[0]);
+                
+                const requestData = { image_base64: base64 };
+                if (userId) requestData.expected_user_id = parseInt(userId);
+
+                const response = await fetch(`${API_BASE}/face/recognize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const resultHtml = `
+                        <h4>识别成功</h4>
+                        <p><strong>用户ID:</strong> ${data.user_id}</p>
+                        <p><strong>用户名:</strong> ${data.username}</p>
+                        <p><strong>置信度:</strong> ${(data.confidence * 100).toFixed(2)}%</p>
+                        <p><strong>识别时间:</strong> ${new Date(data.recognition_time).toLocaleString()}</p>
+                    `;
+                    showResult('faceRecognizeResult', resultHtml, 'success');
+                } else {
+                    showResult('faceRecognizeResult', `识别失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceRecognizeResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 人脸检测
+        async function detectFaces() {
+            const fileInput = document.getElementById('faceRecognizeInput');
+
+            if (!fileInput.files.length) {
+                showResult('faceRecognizeResult', '请上传图片', 'error');
+                return;
+            }
+
+            showLoading('faceRecognizeResult', '检测中...');
+
+            try {
+                const base64 = await fileToBase64(fileInput.files[0]);
+                
+                const response = await fetch(`${API_BASE}/face/detect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_base64: base64 })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('faceRecognizeResult', `检测成功: 发现 ${data.face_count} 个人脸`, 'success');
+                } else {
+                    showResult('faceRecognizeResult', `检测失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceRecognizeResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取用户信息
+        async function getUserInfo() {
+            const userId = document.getElementById('manageUserId').value;
+            if (!userId) {
+                showResult('faceManageResult', '请输入用户ID', 'error');
+                return;
+            }
+
+            showLoading('faceManageResult', '查询中...');
+
+            try {
+                const response = await fetch(`${API_BASE}/face/user/${userId}/info`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const resultHtml = `
+                        <h4>用户信息</h4>
+                        <p><strong>用户ID:</strong> ${data.user_id}</p>
+                        <p><strong>用户名:</strong> ${data.username}</p>
+                        <p><strong>已注册人脸:</strong> ${data.has_face_registered ? '是' : '否'}</p>
+                        <p><strong>注册时间:</strong> ${data.face_registered_time ? new Date(data.face_registered_time).toLocaleString() : '未注册'}</p>
+                        <p><strong>数据版本:</strong> ${data.face_data_version || '无'}</p>
+                    `;
+                    showResult('faceManageResult', resultHtml, 'success');
+                } else {
+                    const error = await response.json();
+                    showResult('faceManageResult', `查询失败: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 删除人脸数据
+        async function deleteFaceData() {
+            const userId = document.getElementById('manageUserId').value;
+            if (!userId) {
+                showResult('faceManageResult', '请输入用户ID', 'error');
+                return;
+            }
+
+            if (!confirm(`确定要删除用户 ${userId} 的人脸数据吗？`)) return;
+
+            showLoading('faceManageResult', '删除中...');
+
+            try {
+                const response = await fetch(`${API_BASE}/face/user/${userId}/face`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('faceManageResult', `删除成功: ${data.message}`, 'success');
+                } else {
+                    showResult('faceManageResult', `删除失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 重载缓存
+        async function reloadCache() {
+            showLoading('faceManageResult', '重载中...');
+
+            try {
+                const response = await fetch(`${API_BASE}/face/reload-cache`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('faceManageResult', `重载成功: ${data.message}`, 'success');
+                } else {
+                    showResult('faceManageResult', `重载失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('faceManageResult', `请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查服务状态
+            checkServiceStatus();
+            setInterval(checkServiceStatus, 30000); // 每30秒检查一次
+
+            // 设置文件上传
+            setupFileUpload('ocrUploadArea', 'ocrFileInput', 'ocrPreview', 'ocrSubmitBtn');
+            setupFileUpload('faceRegisterUploadArea', 'faceRegisterInput', 'faceRegisterPreview', 'faceRegisterBtn');
+            setupFileUpload('faceRecognizeUploadArea', 'faceRecognizeInput', 'faceRecognizePreview', 'faceRecognizeBtn');
+
+            // 绑定事件
+            document.getElementById('ocrSubmitBtn').addEventListener('click', performOCR);
+            document.getElementById('faceRegisterBtn').addEventListener('click', registerFace);
+            document.getElementById('faceRecognizeBtn').addEventListener('click', recognizeFace);
+            document.getElementById('faceDetectBtn').addEventListener('click', detectFaces);
+            document.getElementById('getUserInfoBtn').addEventListener('click', getUserInfo);
+            document.getElementById('deleteFaceBtn').addEventListener('click', deleteFaceData);
+            document.getElementById('reloadCacheBtn').addEventListener('click', reloadCache);
+
+            // 监听输入变化
+            ['registerUserId', 'registerUsername'].forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    const userId = document.getElementById('registerUserId').value;
+                    const username = document.getElementById('registerUsername').value;
+                    const hasFile = document.getElementById('faceRegisterInput').files.length > 0;
+                    document.getElementById('faceRegisterBtn').disabled = !(userId && username && hasFile);
+                });
+            });
+
+            // 检测按钮状态更新
+            document.getElementById('faceRecognizeInput').addEventListener('change', () => {
+                const hasFile = document.getElementById('faceRecognizeInput').files.length > 0;
+                document.getElementById('faceDetectBtn').disabled = !hasFile;
+            });
+        });
+    </script>
+</body>
+</html>

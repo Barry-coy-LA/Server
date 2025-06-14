@@ -1,0 +1,15 @@
+# requirements.txt
+fastapi
+uvicorn
+paddleocr
+pydantic
+
+# 人脸识别相关依赖
+face-recognition
+opencv-python
+pillow
+numpy
+dlib
+
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
