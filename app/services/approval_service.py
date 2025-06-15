@@ -1,4 +1,4 @@
-# app/services/approval_service.py - 重新设计的审批服务
+# app/services/approval_service.py - 优化版审批服务
 import sqlite3
 import uuid
 import asyncio
@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, cm
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
@@ -284,12 +284,85 @@ class PDFGenerator:
         doc.build(story)
         return pdf_path
 
+# 更新 EmailSender 类使用模板文件
+from jinja2 import Environment, FileSystemLoader
+import uuid
+from pathlib import Path
+
 class EmailSender:
-    """邮件发送器"""
+    """邮件发送器 - 使用模板文件"""
     
     def __init__(self, local_ip: str = "127.0.0.1", port: int = 8000):
         self.local_ip = local_ip
         self.port = port
+        
+        # 初始化Jinja2模板环境
+        template_dir = Path("app/templates")
+        if not template_dir.exists():
+            template_dir.mkdir(parents=True, exist_ok=True)
+            logger.warning(f"模板目录不存在，已创建: {template_dir}")
+        
+        self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
+        
+        # 检查模板文件是否存在
+        template_file = template_dir / "approval_email_template.html"
+        if not template_file.exists():
+            logger.warning(f"邮件模板文件不存在: {template_file}")
+            self._create_default_template(template_file)
+    
+    def _create_default_template(self, template_path: Path):
+        """创建默认邮件模板文件"""
+        default_template = '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>实验报告审批通知</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
+        .btn { display: inline-block; padding: 15px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .btn-approve { background: #28a745; color: white; }
+        .btn-reject { background: #dc3545; color: white; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔬 实验报告审批通知</h1>
+        <p>TianMu工业AGI试验台</p>
+    </div>
+    <div class="content">
+        <p>尊敬的审批人员，您好！</p>
+        <p>一份实验报告需要您的审批：</p>
+        <ul>
+            <li><strong>报告编号:</strong> {{ report_id }}</li>
+            <li><strong>标题:</strong> {{ title }}</li>
+            <li><strong>操作员:</strong> {{ operator }}</li>
+            <li><strong>提交时间:</strong> {{ submit_time }}</li>
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ approve_url }}" class="btn btn-approve">✅ 通过审批</a>
+            <a href="{{ reject_url }}" class="btn btn-reject">❌ 驳回报告</a>
+        </div>
+        <div class="warning">
+            <strong>⚠️ 重要提示：</strong>
+            <ul>
+                <li>本审批链接仅在公司局域网内有效</li>
+                <li>链接有效期为30分钟</li>
+                <li>请勿转发此邮件</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>'''
+        
+        try:
+            with open(template_path, 'w', encoding='utf-8') as f:
+                f.write(default_template)
+            logger.info(f"已创建默认邮件模板: {template_path}")
+        except Exception as e:
+            logger.error(f"创建默认模板失败: {e}")
     
     def send_approval_email(self, request: ApprovalRequest, approve_token: str, 
                           reject_token: str, pdf_path: Path) -> bool:
@@ -299,21 +372,38 @@ class EmailSender:
             msg = MIMEMultipart('alternative')
             msg['From'] = request.from_email
             msg['To'] = request.approver_email
-            msg['Subject'] = f"实验报告审批 - {request.title} ({request.report_id})"
+            msg['Subject'] = f"🔬 实验报告审批 - {request.title} ({request.report_id})"
             
             # 生成审批链接
             approve_url = f"http://{self.local_ip}:{self.port}/approval/approve?token={approve_token}"
             reject_url = f"http://{self.local_ip}:{self.port}/approval/reject?token={reject_token}"
             
-            # HTML邮件内容
-            html_content = self._generate_email_html(
-                request, approve_url, reject_url
-            )
+            # 准备模板变量
+            template_vars = {
+                'report_id': request.report_id,
+                'title': request.title,
+                'operator': request.operator,
+                'approver_email': request.approver_email,
+                'content': request.content,
+                'approve_url': approve_url,
+                'reject_url': reject_url,
+                'submit_time': datetime.now().strftime("%Y年%m月%d日 %H:%M:%S"),
+                'expire_time': (datetime.now() + timedelta(minutes=30)).strftime("%Y年%m月%d日 %H:%M:%S"),
+                'server_address': f"{self.local_ip}:{self.port}",
+                'email_id': str(uuid.uuid4())[:8],
+                'send_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
             
-            # 纯文本内容
-            text_content = self._generate_email_text(
-                request, approve_url, reject_url
-            )
+            # 渲染HTML模板
+            try:
+                template = self.jinja_env.get_template('approval_email_template.html')
+                html_content = template.render(**template_vars)
+            except Exception as e:
+                logger.warning(f"使用模板失败，使用默认HTML: {e}")
+                html_content = self._generate_fallback_html(request, approve_url, reject_url)
+            
+            # 生成纯文本内容
+            text_content = self._generate_email_text(request, approve_url, reject_url)
             
             # 添加邮件内容
             part1 = MIMEText(text_content, 'plain', 'utf-8')
@@ -334,87 +424,58 @@ class EmailSender:
                     f'attachment; filename= "report_{request.report_id}.pdf"'
                 )
                 msg.attach(part)
+                logger.info(f"已添加PDF附件: {pdf_path}")
+            else:
+                logger.warning(f"PDF文件不存在: {pdf_path}")
             
             # 发送邮件
             self._send_smtp_email(msg, request)
+            logger.info(f"审批邮件发送成功: {request.approver_email}")
             return True
             
         except Exception as e:
             logger.error(f"发送审批邮件失败: {e}")
             return False
     
-    def _generate_email_html(self, request: ApprovalRequest, 
-                           approve_url: str, reject_url: str) -> str:
-        """生成HTML邮件内容"""
+    def _generate_fallback_html(self, request: ApprovalRequest, 
+                               approve_url: str, reject_url: str) -> str:
+        """生成备用HTML邮件内容（当模板不可用时）"""
         current_time = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
         
         return f'''
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实验报告审批</title>
     <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }}
-        .info-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        .info-table td {{ padding: 10px; border: 1px solid #ddd; }}
-        .info-table .label {{ background: #e9ecef; font-weight: bold; width: 120px; }}
-        .buttons {{ text-align: center; margin: 30px 0; }}
-        .btn {{ display: inline-block; padding: 15px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }}
+        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #007bff; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background: #f8f9fa; }}
+        .btn {{ display: inline-block; padding: 15px 30px; margin: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }}
         .btn-approve {{ background: #28a745; color: white; }}
         .btn-reject {{ background: #dc3545; color: white; }}
-        .warning {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }}
-        .footer {{ text-align: center; font-size: 12px; color: #666; margin-top: 30px; }}
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🔬 实验报告审批通知</h1>
-        <p>TianMu工业AGI试验台 · 审批系统</p>
     </div>
-    
     <div class="content">
         <p>尊敬的审批人员，您好！</p>
-        <p>一份实验报告需要您的审批，具体信息如下：</p>
-        
-        <table class="info-table">
-            <tr><td class="label">报告编号:</td><td>{request.report_id}</td></tr>
-            <tr><td class="label">报告标题:</td><td>{request.title}</td></tr>
-            <tr><td class="label">操作员:</td><td>{request.operator}</td></tr>
-            <tr><td class="label">审批人:</td><td>{request.approver_email}</td></tr>
-            <tr><td class="label">提交时间:</td><td>{current_time}</td></tr>
-        </table>
-        
-        <p><strong>📎 报告PDF文件已作为附件随本邮件发送，请下载查看详细内容。</strong></p>
-        
-        <div class="buttons">
+        <p>报告编号: <strong>{request.report_id}</strong></p>
+        <p>报告标题: {request.title}</p>
+        <p>操作员: {request.operator}</p>
+        <p>提交时间: {current_time}</p>
+        <div style="text-align: center; margin: 30px 0;">
             <a href="{approve_url}" class="btn btn-approve">✅ 通过审批</a>
             <a href="{reject_url}" class="btn btn-reject">❌ 驳回报告</a>
         </div>
-        
-        <div class="warning">
-            <strong>⚠️ 重要安全提示：</strong>
-            <ul>
-                <li><strong>本审批链接仅在公司局域网内有效</strong></li>
-                <li>链接具有唯一性，仅能使用一次</li>
-                <li>链接有效期为30分钟，过期后将自动失效</li>
-                <li>请勿转发此邮件，链接仅限审批人本人使用</li>
-                <li>点击审批按钮前会有二次确认，请仔细核对</li>
-            </ul>
-        </div>
-        
-        <p>如果上述按钮无法点击，请复制以下链接到浏览器地址栏：</p>
-        <p><strong>通过审批：</strong><br><code>{approve_url}</code></p>
-        <p><strong>驳回报告：</strong><br><code>{reject_url}</code></p>
-    </div>
-    
-    <div class="footer">
-        <p>本邮件由TianMu工业AGI试验台自动发送，请勿回复。</p>
-        <p>如有技术问题，请联系系统管理员。</p>
-        <p>服务器地址: {self.local_ip}:{self.port}</p>
+        <p><strong>⚠️ 重要提示：</strong></p>
+        <ul>
+            <li>本审批链接仅在公司局域网内有效</li>
+            <li>链接有效期为30分钟</li>
+            <li>请勿转发此邮件</li>
+        </ul>
     </div>
 </body>
 </html>
@@ -450,11 +511,8 @@ TianMu工业AGI试验台 - 实验报告审批通知
 • 链接具有唯一性，仅能使用一次
 • 链接有效期为30分钟，过期后将自动失效
 • 请勿转发此邮件，链接仅限审批人本人使用
-• 点击审批按钮前会有二次确认，请仔细核对
 
 本邮件由TianMu工业AGI试验台自动发送，请勿回复。
-如有技术问题，请联系系统管理员。
-
 服务器地址: {self.local_ip}:{self.port}
         '''
     
@@ -471,6 +529,10 @@ TianMu工业AGI试验台 - 实验报告审批通知
         text = msg.as_string()
         server.sendmail(request.from_email, request.approver_email, text)
         server.quit()
+        logger.info(f"SMTP邮件发送完成: {request.smtp_server}")
+
+# 还需要在 approval_service.py 顶部添加 jinja2 导入
+# from jinja2 import Environment, FileSystemLoader
 
 class ApprovalService:
     """审批服务主类"""
@@ -679,7 +741,7 @@ class ApprovalService:
                 'message': f'查询失败: {str(e)}'
             }
     
-    def get_statistics(self) -> Dict[str, Any]:
+    async def get_approval_statistics(self) -> Dict[str, Any]:
         """获取审批统计信息"""
         try:
             with sqlite3.connect(self.database.db_path) as conn:
@@ -725,3 +787,7 @@ class ApprovalService:
                 'today_submissions': 0,
                 'avg_approval_time_minutes': 0.0
             }
+    
+    async def _ensure_cache_initialized(self):
+        """确保缓存已初始化（兼容性方法）"""
+        pass

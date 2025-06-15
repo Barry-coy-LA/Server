@@ -212,3 +212,102 @@
 2025-06-15 16:59:29,838 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 💾 保存系统状态...
 2025-06-15 16:59:29,838 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭
 2025-06-15 16:59:29,838 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭
+2025-06-15 17:24:25,338 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-15 17:24:25,339 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-15 17:24:28,936 [WARNING] app.services.approval_service: 邮件模板文件不存在: app/templates/approval_email_template.html
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 管理后台模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 使用追踪模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ OCR模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ OCR模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 人脸识别模块已加载
+2025-06-15 17:24:28,983 [INFO] TianMu-AGI-Lab: ✅ 人脸识别模块已加载
+2025-06-15 17:24:28,984 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-15 17:24:28,984 [INFO] app.services.approval_service: 审批服务已初始化
+2025-06-15 17:24:28,984 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统已加载
+2025-06-15 17:24:28,984 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统已加载
+2025-06-15 17:24:28,984 [INFO] TianMu-AGI-Lab: ✅ 静态文件系统已启动: app/static
+2025-06-15 17:24:28,984 [INFO] TianMu-AGI-Lab: ✅ 静态文件系统已启动: app/static
+2025-06-15 17:24:28,985 [INFO] TianMu-AGI-Lab: ✅ 管理后台路由已注册
+2025-06-15 17:24:28,985 [INFO] TianMu-AGI-Lab: ✅ 管理后台路由已注册
+2025-06-15 17:24:28,985 [INFO] TianMu-AGI-Lab: ✅ OCR路由已注册
+2025-06-15 17:24:28,985 [INFO] TianMu-AGI-Lab: ✅ OCR路由已注册
+2025-06-15 17:24:28,987 [INFO] TianMu-AGI-Lab: ✅ 人脸识别路由已注册
+2025-06-15 17:24:28,987 [INFO] TianMu-AGI-Lab: ✅ 人脸识别路由已注册
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统路由已注册
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ✅ 实验审批系统路由已注册
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: [STARTUP] TianMu工业AGI试验台正在启动...
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: [STARTUP] TianMu工业AGI试验台正在启动...
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:28,989 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 主机名: liuchengyideMacBook-Pro.local
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 主机名: liuchengyideMacBook-Pro.local
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 主IP地址: 198.18.0.1
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 主IP地址: 198.18.0.1
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 所有IP地址: 192.168.1.5, 169.254.200.35
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [NETWORK] 所有IP地址: 192.168.1.5, 169.254.200.35
+2025-06-15 17:24:29,001 [INFO] app.services.usage_tracker: 使用追踪器初始化完成，加载了 0 条记录
+2025-06-15 17:24:29,001 [INFO] app.services.usage_tracker: 使用追踪器初始化完成，加载了 0 条记录
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 数据追踪系统已启动
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 数据追踪系统已启动
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 实验审批系统已启动
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 实验审批系统已启动
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 系统资源: 10核心, 16.0GB内存
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 系统资源: 10核心, 16.0GB内存
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 工业控制台界面已就绪
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 工业控制台界面已就绪
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 已加载模块: 管理后台, OCR引擎, 生物识别, 实验审批, 使用追踪
+2025-06-15 17:24:29,001 [INFO] TianMu-AGI-Lab: [STARTUP] ✅ 已加载模块: 管理后台, OCR引擎, 生物识别, 实验审批, 使用追踪
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS] 🌐 局域网访问地址:
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS] 🌐 局域网访问地址:
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS]    http://192.168.1.5:8000
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS]    http://192.168.1.5:8000
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS]    http://169.254.200.35:8000
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ACCESS]    http://169.254.200.35:8000
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 可用服务端点:
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 可用服务端点:
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🧠 AGI控制中心: /admin/login
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🧠 AGI控制中心: /admin/login
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 OCR接口: /ocr/table
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 OCR接口: /ocr/table
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔒 生物识别: /face/register
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔒 生物识别: /face/register
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📋 实验审批: /approval/test
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📋 实验审批: /approval/test
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📚 系统文档: /docs
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📚 系统文档: /docs
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔍 健康监控: /health
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🔍 健康监控: /health
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 系统监控: /api/system-monitor
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📊 系统监控: /api/system-monitor
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🌐 网络信息: /api/network-info
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 🌐 网络信息: /api/network-info
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📈 审批统计: /api/approval-stats
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [ENDPOINTS] 📈 审批统计: /api/approval-stats
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [SYSTEM] 🚀 TianMu工业AGI试验台启动完成
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [SYSTEM] 🚀 TianMu工业AGI试验台启动完成
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [SYSTEM] 🔗 局域网内其他设备可通过以上地址访问
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: [SYSTEM] 🔗 局域网内其他设备可通过以上地址访问
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:24:29,002 [INFO] TianMu-AGI-Lab: ============================================================
+2025-06-15 17:25:34,546 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🛑 TianMu工业AGI试验台正在关闭...
+2025-06-15 17:25:34,546 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🛑 TianMu工业AGI试验台正在关闭...
+2025-06-15 17:25:34,569 [INFO] app.services.pdf_generator: PDF生成器已初始化
+2025-06-15 17:25:34,569 [INFO] app.services.pdf_generator: PDF生成器已初始化
+2025-06-15 17:25:34,569 [INFO] app.services.pdf_generator: 清理了 0 个旧PDF文件
+2025-06-15 17:25:34,569 [INFO] app.services.pdf_generator: 清理了 0 个旧PDF文件
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🧹 清理了 0 个旧PDF文件
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 🧹 清理了 0 个旧PDF文件
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 💾 保存系统状态...
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] 💾 保存系统状态...
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭
+2025-06-15 17:25:34,569 [INFO] TianMu-AGI-Lab: [SHUTDOWN] ✅ 系统已安全关闭

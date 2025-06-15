@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验报告审批通知 - {{ report_id }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .email-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px 20px;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .report-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        
+        .info-table td {
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            width: 100px;
+            padding-right: 15px;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .attachment-notice {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .attachment-notice .icon {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+        
+        .buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            text-align: center;
+        }
+        
+        .btn-approve {
+            background: #28a745;
+            color: white;
+            border: 2px solid #28a745;
+        }
+        
+        .btn-approve:hover {
+            background: #218838;
+            border-color: #218838;
+        }
+        
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+            border: 2px solid #dc3545;
+        }
+        
+        .btn-reject:hover {
+            background: #c82333;
+            border-color: #c82333;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            position: relative;
+        }
+        
+        .warning::before {
+            content: '⚠️';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 18px;
+        }
+        
+        .warning-content {
+            margin-left: 35px;
+        }
+        
+        .warning h3 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .warning ul {
+            color: #856404;
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .warning li {
+            margin-bottom: 8px;
+        }
+        
+        .links-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .links-section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .links-section code {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            word-break: break-all;
+            display: block;
+            margin: 8px 0;
+            color: #495057;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .footer p {
+            margin: 5px 0;
+        }
+        
+        .security-badge {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 0 4px;
+        }
+        
+        .timestamp {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .content {
+                padding: 20px 15px;
+            }
+            
+            .btn {
+                display: block;
+                margin: 10px auto;
+                width: 80%;
+            }
+            
+            .info-table td {
+                display: block;
+                padding: 5px 0;
+            }
+            
+            .info-label {
+                font-weight: 600;
+                width: auto;
+                padding-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- 邮件头部 -->
+        <div class="header">
+            <h1>🔬 实验报告审批通知</h1>
+            <p>TianMu工业AGI试验台 · 实验审批系统</p>
+        </div>
+        
+        <!-- 邮件内容 -->
+        <div class="content">
+            <div class="greeting">
+                尊敬的审批人员，您好！
+            </div>
+            
+            <p>一份实验报告需要您的审批，具体信息如下：</p>
+            
+            <!-- 报告信息 -->
+            <div class="report-info">
+                <table class="info-table">
+                    <tr>
+                        <td class="info-label">📋 报告编号:</td>
+                        <td class="info-value"><strong>{{ report_id }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">📄 报告标题:</td>
+                        <td class="info-value">{{ title }}</td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">👨‍🔬 操作员:</td>
+                        <td class="info-value">{{ operator }}</td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">👤 审批人:</td>
+                        <td class="info-value">{{ approver_email }}</td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">⏰ 提交时间:</td>
+                        <td class="info-value">
+                            <span class="timestamp">{{ submit_time }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">⏳ 截止时间:</td>
+                        <td class="info-value">
+                            <span class="timestamp">{{ expire_time }}</span>
+                            <span class="security-badge">30分钟内有效</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- 附件说明 -->
+            <div class="attachment-notice">
+                <span class="icon">📎</span>
+                <strong>报告PDF文件已作为附件随本邮件发送，请下载查看详细内容。</strong>
+            </div>
+            
+            <!-- 审批按钮 -->
+            <div class="buttons">
+                <a href="{{ approve_url }}" class="btn btn-approve">
+                    ✅ 通过审批
+                </a>
+                <a href="{{ reject_url }}" class="btn btn-reject">
+                    ❌ 驳回报告
+                </a>
+            </div>
+            
+            <!-- 安全提示 -->
+            <div class="warning">
+                <div class="warning-content">
+                    <h3>重要安全提示</h3>
+                    <ul>
+                        <li><strong>本审批链接仅在公司局域网内有效</strong></li>
+                        <li>链接具有唯一性，仅能使用一次</li>
+                        <li>链接有效期为30分钟，过期后将自动失效</li>
+                        <li>请勿转发此邮件，链接仅限审批人本人使用</li>
+                        <li>点击审批按钮前会有二次确认，请仔细核对</li>
+                        <li>所有审批操作将记录IP地址和时间用于审计追溯</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- 备用链接 -->
+            <div class="links-section">
+                <h4>🔗 如果上述按钮无法点击，请复制以下链接到浏览器地址栏：</h4>
+                <p><strong>通过审批：</strong></p>
+                <code>{{ approve_url }}</code>
+                <p><strong>驳回报告：</strong></p>
+                <code>{{ reject_url }}</code>
+            </div>
+            
+            <!-- 报告内容预览 -->
+            {% if content %}
+            <div class="report-info">
+                <h4 style="margin: 0 0 10px 0; color: #495057;">📊 报告内容预览：</h4>
+                <div style="max-height: 200px; overflow-y: auto; padding: 10px; background: white; border-radius: 4px; font-size: 14px; line-height: 1.5;">
+                    {{ content[:500] }}{% if content|length > 500 %}...{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- 邮件底部 -->
+        <div class="footer">
+            <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
+            <p>本邮件由系统自动发送，请勿回复</p>
+            <p>如有技术问题，请联系系统管理员</p>
+            <p>服务器地址: {{ server_address }} | 系统版本: v2.1.0</p>
+            <p style="margin-top: 10px; font-size: 10px; color: #999;">
+                邮件ID: {{ email_id }} | 发送时间: {{ send_timestamp }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
