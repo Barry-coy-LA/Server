@@ -24,7 +24,7 @@
         }
 
         body {
-            font-family: 'Courier New', Monaco, 'Lucida Console', monospace;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, var(--bg-dark) 0%, #051505 25%, #0f1f0f 50%, var(--bg-secondary) 75%, #0a2f0a 100%);
             color: var(--text-light);
             overflow-x: hidden;
@@ -160,11 +160,52 @@
             border-radius: 50%;
             background: var(--primary-green);
             animation: pulse 2s infinite;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.offline {
+            background: #ff4444;
+            animation: pulseRed 2s infinite;
+        }
+
+        .status-dot.warning {
+            background: #ffaa00;
+            animation: pulseYellow 2s infinite;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        @keyframes pulseRed {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 5px #ff4444; }
+            50% { opacity: 0.7; transform: scale(1.3); box-shadow: 0 0 15px #ff4444; }
+        }
+
+        @keyframes pulseYellow {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 5px #ffaa00; }
+            50% { opacity: 0.7; transform: scale(1.3); box-shadow: 0 0 15px #ffaa00; }
+        }
+
+        /* 状态文字样式 */
+        .status-text {
+            transition: color 0.3s ease;
+        }
+
+        .status-text.offline {
+            color: #ff4444 !important;
+            text-shadow: 0 0 5px #ff4444;
+        }
+
+        .status-text.warning {
+            color: #ffaa00 !important;
+            text-shadow: 0 0 5px #ffaa00;
+        }
+
+        .status-text.online {
+            color: var(--primary-green);
+            text-shadow: 0 0 5px var(--primary-green);
         }
 
         /* 主要内容区域 */
@@ -175,12 +216,11 @@
             justify-content: center;
             text-align: center;
             position: relative;
-            padding-top: 100px;
+            padding: 120px 2rem 40px;
         }
 
         .hero-content {
             max-width: 1000px;
-            padding: 0 2rem;
             animation: systemBoot 2s ease-out;
         }
 
@@ -198,7 +238,7 @@
         }
 
         .hero-title {
-            font-size: 4rem;
+            font-size: clamp(2.5rem, 6vw, 4rem);
             font-weight: bold;
             margin-bottom: 1rem;
             color: var(--primary-green);
@@ -214,7 +254,7 @@
         }
 
         .hero-subtitle {
-            font-size: 1.5rem;
+            font-size: clamp(1rem, 3vw, 1.5rem);
             margin-bottom: 2rem;
             color: var(--text-dim);
             letter-spacing: 1px;
@@ -222,7 +262,7 @@
         }
 
         .hero-description {
-            font-size: 1.1rem;
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
             margin-bottom: 3rem;
             color: var(--text-light);
             line-height: 1.8;
@@ -240,7 +280,7 @@
 
         .modules-title {
             text-align: center;
-            font-size: 3rem;
+            font-size: clamp(2rem, 5vw, 3rem);
             font-weight: bold;
             margin-bottom: 3rem;
             color: var(--primary-green);
@@ -251,21 +291,25 @@
 
         .modules-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
             margin-bottom: 4rem;
         }
 
+        /* 统一的模块卡片样式 */
         .module-card {
             background: rgba(0, 255, 65, 0.05);
             backdrop-filter: blur(10px);
             border: 2px solid var(--border-green);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 2.5rem;
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
             cursor: pointer;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
         }
 
         .module-card::before {
@@ -277,7 +321,7 @@
             bottom: -2px;
             background: linear-gradient(45deg, var(--primary-green), transparent, var(--secondary-green), transparent);
             z-index: -1;
-            border-radius: 8px;
+            border-radius: 12px;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -287,8 +331,8 @@
         }
 
         .module-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px var(--glow-green);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px var(--glow-green);
             background: rgba(0, 255, 65, 0.1);
         }
 
@@ -306,7 +350,7 @@
         }
 
         .module-title {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: bold;
             color: var(--primary-green);
             letter-spacing: 1px;
@@ -318,17 +362,20 @@
             gap: 0.5rem;
             margin-bottom: 1rem;
             font-family: monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .module-description {
             color: var(--text-light);
             line-height: 1.6;
             margin-bottom: 1.5rem;
+            flex-grow: 1;
+            font-size: 0.9rem;
         }
 
         .module-features {
             list-style: none;
+            margin-top: auto;
         }
 
         .module-features li {
@@ -337,6 +384,7 @@
             padding-left: 1.5rem;
             position: relative;
             font-family: monospace;
+            font-size: 0.8rem;
         }
 
         .module-features li::before {
@@ -344,6 +392,163 @@
             position: absolute;
             left: 0;
             color: var(--primary-green);
+        }
+
+        /* 模块状态标识 */
+        .module-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-operational {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .badge-new {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            animation: newFeature 2s ease-in-out infinite;
+        }
+
+        .badge-standby {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+            color: white;
+        }
+
+        @keyframes newFeature {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* 弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a2f1a 0%, #0a0f0a 100%);
+            border: 2px solid var(--primary-green);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            width: 500px;
+            color: var(--text-light);
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+            position: relative;
+            overflow-y: auto;
+            transform: scale(0.8) translateY(50px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--primary-green);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 255, 65, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-title {
+            color: var(--primary-green);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--primary-green);
+        }
+
+        .api-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .api-section h3 {
+            color: var(--secondary-green);
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+        }
+
+        .api-endpoint {
+            background: rgba(0, 255, 65, 0.1);
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--primary-green);
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .api-method {
+            color: var(--primary-green);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .api-description {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .feature-list li {
+            padding: 0.3rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--primary-green);
+            font-weight: bold;
         }
 
         /* 实时监控面板 */
@@ -356,7 +561,7 @@
 
         .monitoring-title {
             text-align: center;
-            font-size: 2.5rem;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
             margin-bottom: 2rem;
             color: var(--primary-green);
             text-transform: uppercase;
@@ -365,8 +570,8 @@
 
         .monitoring-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
             max-width: 1400px;
             margin: 0 auto;
         }
@@ -398,7 +603,7 @@
         }
 
         .monitor-value {
-            font-size: 2.5rem;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
             font-weight: bold;
             color: var(--primary-green);
             margin-bottom: 0.5rem;
@@ -407,7 +612,7 @@
 
         .monitor-label {
             color: var(--text-dim);
-            font-size: 0.9rem;
+            font-size: clamp(0.7rem, 2vw, 0.9rem);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -467,22 +672,91 @@
         }
 
         /* 响应式设计 */
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .nav-status {
-                flex-direction: column;
                 gap: 1rem;
             }
             
-            .hero-title {
-                font-size: 2.5rem;
+            .nav-status .status-item {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            
+            .modules-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .monitoring-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .nav-status {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.5rem;
+            }
+            
+            .hero {
+                padding: 100px 1rem 40px;
+            }
+            
+            .modules {
+                padding: 3rem 1rem;
             }
             
             .modules-grid {
                 grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .module-card {
+                padding: 2rem;
+                min-height: auto;
+            }
+            
+            .monitoring {
+                padding: 2rem 1rem;
             }
             
             .monitoring-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            
+            .modal-content {
+                width: 95vw;
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 1.4rem;
+            }
+            
+            .monitoring-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-title {
+                letter-spacing: 1px;
+            }
+            
+            .btn {
+                padding: 0.8rem 1.5rem;
+                margin: 0.3rem;
+                font-size: 0.9rem;
             }
         }
 
@@ -496,8 +770,8 @@
         /* 数据传输指示器 */
         .data-indicator {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             background: var(--primary-green);
             border-radius: 50%;
             margin-left: 0.5rem;
@@ -509,36 +783,21 @@
             50% { opacity: 1; }
         }
 
-        /* 新增：审批系统特殊样式 */
-        .approval-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            animation: newFeature 2s ease-in-out infinite;
+        /* 高对比度和可访问性 */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
-        @keyframes newFeature {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .email-icon {
-            display: inline-block;
-            margin-left: 0.5rem;
-            animation: emailPulse 3s ease-in-out infinite;
-        }
-
-        @keyframes emailPulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; transform: scale(1.1); }
+        @media (prefers-contrast: high) {
+            :root {
+                --primary-green: #00ff00;
+                --text-light: #ffffff;
+                --border-green: #00ff00;
+            }
         }
     </style>
 </head>
@@ -555,12 +814,12 @@
             <div class="logo">⚡ TIANMU AGI-LAB</div>
             <div class="nav-status">
                 <div class="status-item">
-                    <div class="status-dot"></div>
-                    <span id="systemStatus">SYSTEM ONLINE</span>
+                    <div class="status-dot" id="systemStatusDot"></div>
+                    <span class="status-text" id="systemStatus">SYSTEM ONLINE</span>
                 </div>
                 <div class="status-item">
-                    <div class="status-dot"></div>
-                    <span id="connectionStatus">HOST CONNECTED</span>
+                    <div class="status-dot" id="connectionStatusDot"></div>
+                    <span class="status-text" id="connectionStatus">HOST CONNECTED</span>
                 </div>
                 <div class="status-item console-text">
                     <span>SESSION: </span>
@@ -591,11 +850,13 @@
     <section class="modules" id="modules">
         <h2 class="modules-title">SYSTEM MODULES</h2>
         <div class="modules-grid">
-            <div class="module-card" onclick="window.open('/docs#/OCR', '_blank')">
+            <!-- OCR模块 -->
+            <div class="module-card" onclick="showModuleDetails('ocr')">
+                <div class="module-badge badge-operational">ACTIVE</div>
                 <div class="module-header">
                     <span class="module-icon">📊</span>
                     <div>
-                        <h3 class="module-title">OCR ANALYSIS ENGINE</h3>
+                        <h3 class="module-title">OCR引擎</h3>
                         <div class="module-status">
                             <span class="console-text">STATUS: ACTIVE</span>
                             <span class="data-indicator"></span>
@@ -613,11 +874,13 @@
                 </ul>
             </div>
 
-            <div class="module-card" onclick="window.open('/docs#/Face%20Recognition', '_blank')">
+            <!-- 人脸识别模块 -->
+            <div class="module-card" onclick="showModuleDetails('face')">
+                <div class="module-badge badge-operational">ACTIVE</div>
                 <div class="module-header">
                     <span class="module-icon">🔒</span>
                     <div>
-                        <h3 class="module-title">BIOMETRIC SECURITY</h3>
+                        <h3 class="module-title">生物识别</h3>
                         <div class="module-status">
                             <span class="console-text">STATUS: MONITORING</span>
                             <span class="data-indicator"></span>
@@ -635,11 +898,13 @@
                 </ul>
             </div>
 
-            <div class="module-card" onclick="window.open('/admin/login', '_blank')">
+            <!-- AGI控制中心 -->
+            <div class="module-card" onclick="showModuleDetails('agi')">
+                <div class="module-badge badge-operational">LEARNING</div>
                 <div class="module-header">
                     <span class="module-icon">🧠</span>
                     <div>
-                        <h3 class="module-title">AGI CONTROL CENTER</h3>
+                        <h3 class="module-title">AGI控制中心</h3>
                         <div class="module-status">
                             <span class="console-text">STATUS: LEARNING</span>
                             <span class="data-indicator"></span>
@@ -657,17 +922,16 @@
                 </ul>
             </div>
 
-            <!-- 新增：实验审批系统模块 -->
-            <div class="module-card" onclick="showApprovalDemo()">
-                <div class="approval-badge">NEW</div>
+            <!-- 实验审批系统 -->
+            <div class="module-card" onclick="showModuleDetails('approval')">
+                <div class="module-badge badge-new">NEW</div>
                 <div class="module-header">
                     <span class="module-icon">📋</span>
                     <div>
-                        <h3 class="module-title">EXPERIMENT APPROVAL SYSTEM</h3>
+                        <h3 class="module-title">实验审批</h3>
                         <div class="module-status">
                             <span class="console-text">STATUS: OPERATIONAL</span>
                             <span class="data-indicator"></span>
-                            <span class="email-icon">📧</span>
                         </div>
                     </div>
                 </div>
@@ -679,16 +943,16 @@
                     <li>邮件审批流程</li>
                     <li>局域网安全验证</li>
                     <li>审批记录追溯</li>
-                    <li>一次性Token机制</li>
-                    <li>上位机API接口</li>
                 </ul>
             </div>
 
-            <div class="module-card" onclick="showHostInterface()">
+            <!-- 上位机接口 -->
+            <div class="module-card" onclick="showModuleDetails('host')">
+                <div class="module-badge badge-standby">STANDBY</div>
                 <div class="module-header">
                     <span class="module-icon">🔗</span>
                     <div>
-                        <h3 class="module-title">HOST INTERFACE</h3>
+                        <h3 class="module-title">上位机接口</h3>
                         <div class="module-status">
                             <span class="console-text">STATUS: STANDBY</span>
                             <span class="data-indicator"></span>
@@ -699,10 +963,34 @@
                     上位机通信接口，支持多种工业协议和数据格式。实现与现有生产系统的无缝集成。
                 </p>
                 <ul class="module-features">
-                    <li>Modbus/TCP 协议支持</li>
-                    <li>OPC UA 数据交换</li>
+                    <li>HTTP/HTTPS API</li>
+                    <li>JSON数据交换</li>
                     <li>实时数据采集</li>
                     <li>设备状态监控</li>
+                </ul>
+            </div>
+
+            <!-- 系统监控 -->
+            <div class="module-card" onclick="showModuleDetails('monitor')">
+                <div class="module-badge badge-operational">ACTIVE</div>
+                <div class="module-header">
+                    <span class="module-icon">📈</span>
+                    <div>
+                        <h3 class="module-title">系统监控</h3>
+                        <div class="module-status">
+                            <span class="console-text">STATUS: MONITORING</span>
+                            <span class="data-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="module-description">
+                    实时系统监控和性能分析，提供全面的系统健康状态和使用统计信息。
+                </p>
+                <ul class="module-features">
+                    <li>系统资源监控</li>
+                    <li>服务状态检查</li>
+                    <li>性能统计分析</li>
+                    <li>健康状态报告</li>
                 </ul>
             </div>
         </div>
@@ -736,7 +1024,6 @@
                 <div class="monitor-value" id="memoryUsage">-</div>
                 <div class="monitor-label">Memory Usage</div>
             </div>
-            <!-- 新增：审批系统监控 -->
             <div class="monitor-item">
                 <div class="monitor-value" id="pendingApprovals">-</div>
                 <div class="monitor-label">Pending Approvals</div>
@@ -759,11 +1046,270 @@
         </p>
     </footer>
 
+    <!-- 模块详情弹窗 -->
+    <div class="modal-overlay" id="moduleModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <h2 class="modal-title" id="modalTitle">模块详情</h2>
+            <div id="modalContent">
+                <!-- 动态内容将在这里插入 -->
+            </div>
+        </div>
+    </div>
+
     <script>
+        // 模块详情数据
+        const moduleDetails = {
+            ocr: {
+                title: '📊 OCR识别引擎',
+                description: '高精度光学字符识别服务，为C#上位机提供简单易用的API接口。',
+                apis: [
+                    {
+                        method: 'POST',
+                        endpoint: '/ocr/table',
+                        description: '上传图片进行OCR识别，返回JSON格式的表格数据'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/ocr/test',
+                        description: '测试OCR服务状态'
+                    }
+                ],
+                features: [
+                    '支持PNG、JPG、JPEG、BMP格式',
+                    '自动表格检测和数据提取',
+                    '返回结构化JSON数据',
+                    '高精度中英文识别'
+                ],
+                usage: 'C#示例：使用HttpClient POST图片文件到 /ocr/table 端点，获取识别结果。'
+            },
+            face: {
+                title: '🔒 生物识别系统',
+                description: '工业级人脸识别服务，提供注册、验证、检测功能的完整API。',
+                apis: [
+                    {
+                        method: 'POST',
+                        endpoint: '/face/register',
+                        description: '注册人脸信息，返回编码数据'
+                    },
+                    {
+                        method: 'POST',
+                        endpoint: '/face/verify',
+                        description: '验证人脸身份，返回匹配结果'
+                    },
+                    {
+                        method: 'POST',
+                        endpoint: '/face/detect',
+                        description: '检测图片中的人脸数量'
+                    }
+                ],
+                features: [
+                    '高精度人脸检测算法',
+                    '安全的特征编码存储',
+                    '实时身份验证',
+                    '支持多人脸场景处理'
+                ],
+                usage: 'C#示例：POST图片和用户名到相应端点，处理返回的JSON结果。'
+            },
+            agi: {
+                title: '🧠 AGI控制中心',
+                description: '人工通用智能管理界面，提供系统配置和监控功能。',
+                apis: [
+                    {
+                        method: 'GET',
+                        endpoint: '/admin/login',
+                        description: '访问管理后台登录界面'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/admin/dashboard',
+                        description: '管理仪表板，查看系统状态'
+                    }
+                ],
+                features: [
+                    '系统状态实时监控',
+                    '使用统计和分析',
+                    'AGI功能配置',
+                    '安全访问控制'
+                ],
+                usage: '默认密码：tianmu2025，Web界面操作，不需要API调用。'
+            },
+            approval: {
+                title: '📋 实验审批系统',
+                description: '局域网邮件审批流程，支持PDF生成和邮件发送。',
+                apis: [
+                    {
+                        method: 'POST',
+                        endpoint: '/approval/submit_report',
+                        description: '提交实验报告审批请求'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/approval/status/{report_id}',
+                        description: '查询报告审批状态'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/approval/test',
+                        description: '测试审批系统状态'
+                    }
+                ],
+                features: [
+                    '自动PDF报告生成',
+                    '邮件审批流程',
+                    '一次性Token安全机制',
+                    '审批记录完整追溯'
+                ],
+                usage: 'C#示例：POST报告数据和邮件配置到 /approval/submit_report，系统自动处理审批流程。'
+            },
+            host: {
+                title: '🔗 上位机接口',
+                description: '为C#上位机应用提供标准化的数据交换接口。',
+                apis: [
+                    {
+                        method: 'GET',
+                        endpoint: '/api/system-monitor',
+                        description: '获取系统监控数据'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/api/network-info',
+                        description: '获取网络配置信息'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/health',
+                        description: '系统健康检查'
+                    }
+                ],
+                features: [
+                    'RESTful API设计',
+                    'JSON数据格式',
+                    '实时状态查询',
+                    '标准HTTP协议'
+                ],
+                usage: 'C#示例：使用HttpClient GET请求获取系统状态，解析JSON响应数据。'
+            },
+            monitor: {
+                title: '📈 系统监控',
+                description: '提供全面的系统监控和性能分析API。',
+                apis: [
+                    {
+                        method: 'GET',
+                        endpoint: '/api/public-stats',
+                        description: '获取公开统计数据'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/api/approval-stats',
+                        description: '获取审批系统统计'
+                    },
+                    {
+                        method: 'GET',
+                        endpoint: '/docs',
+                        description: '查看完整API文档'
+                    }
+                ],
+                features: [
+                    '实时性能指标',
+                    '服务状态监控',
+                    '使用统计分析',
+                    '系统资源监控'
+                ],
+                usage: 'C#示例：定期GET监控端点，获取系统运行状态数据。'
+            }
+        };
+
+        // 显示模块详情
+        function showModuleDetails(moduleType) {
+            const modal = document.getElementById('moduleModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            const details = moduleDetails[moduleType];
+
+            if (!details) return;
+
+            title.textContent = details.title;
+            
+            content.innerHTML = `
+                <div class="api-section">
+                    <p style="color: var(--text-light); margin-bottom: 1rem; line-height: 1.6;">
+                        ${details.description}
+                    </p>
+                </div>
+
+                <div class="api-section">
+                    <h3>🔌 API接口</h3>
+                    ${details.apis.map(api => `
+                        <div class="api-endpoint">
+                            <div>
+                                <span class="api-method">${api.method}</span>
+                                <code>${api.endpoint}</code>
+                            </div>
+                            <div class="api-description">${api.description}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="api-section">
+                    <h3>✨ 主要功能</h3>
+                    <ul class="feature-list">
+                        ${details.features.map(feature => `<li>${feature}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="api-section">
+                    <h3>💻 C#调用示例</h3>
+                    <div style="background: rgba(0, 255, 65, 0.1); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--primary-green); font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--text-light);">
+                        ${details.usage}
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <a href="/docs" target="_blank" style="
+                        display: inline-block;
+                        padding: 0.8rem 1.5rem;
+                        background: linear-gradient(45deg, var(--dark-green), var(--secondary-green));
+                        color: var(--text-light);
+                        text-decoration: none;
+                        border: 2px solid var(--primary-green);
+                        border-radius: 6px;
+                        font-weight: bold;
+                        transition: all 0.3s ease;
+                    ">
+                        📚 查看完整API文档
+                    </a>
+                </div>
+            `;
+
+            modal.classList.add('show');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('moduleModal').classList.remove('show');
+        }
+
+        // 点击背景关闭弹窗
+        document.getElementById('moduleModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
         // 创建数据流粒子
         function createDataStream() {
             const dataStream = document.getElementById('dataStream');
-            const particleCount = 30;
+            const particleCount = Math.min(30, Math.floor(window.innerWidth / 40));
+
+            dataStream.innerHTML = ''; // 清除现有粒子
 
             for (let i = 0; i < particleCount; i++) {
                 const particle = document.createElement('div');
@@ -791,17 +1337,50 @@
             document.getElementById('sessionTime').textContent = `${hours}:${minutes}:${seconds}`;
         }
 
+        // 更新系统状态显示
+        function updateSystemStatus(isOnline, connectionStatus = 'connected') {
+            const systemStatusDot = document.getElementById('systemStatusDot');
+            const systemStatusText = document.getElementById('systemStatus');
+            const connectionStatusDot = document.getElementById('connectionStatusDot');
+            const connectionStatusText = document.getElementById('connectionStatus');
+
+            if (isOnline) {
+                // 系统在线
+                systemStatusDot.className = 'status-dot';
+                systemStatusText.className = 'status-text online';
+                systemStatusText.textContent = 'SYSTEM ONLINE';
+                
+                if (connectionStatus === 'connected') {
+                    connectionStatusDot.className = 'status-dot';
+                    connectionStatusText.className = 'status-text online';
+                    connectionStatusText.textContent = 'HOST CONNECTED';
+                } else {
+                    connectionStatusDot.className = 'status-dot warning';
+                    connectionStatusText.className = 'status-text warning';
+                    connectionStatusText.textContent = 'HOST WARNING';
+                }
+            } else {
+                // 系统离线
+                systemStatusDot.className = 'status-dot offline';
+                systemStatusText.className = 'status-text offline';
+                systemStatusText.textContent = 'SYSTEM OFFLINE';
+                
+                connectionStatusDot.className = 'status-dot offline';
+                connectionStatusText.className = 'status-text offline';
+                connectionStatusText.textContent = 'HOST DISCONNECTED';
+            }
+        }
+
         // 加载系统监控数据
         async function loadMonitoringData() {
             try {
                 // 系统健康状况
                 const healthResponse = await fetch('/health');
                 if (healthResponse.ok) {
-                    document.getElementById('systemStatus').textContent = 'SYSTEM ONLINE';
-                    document.getElementById('connectionStatus').textContent = 'HOST CONNECTED';
+                    const healthData = await healthResponse.json();
+                    updateSystemStatus(true, 'connected');
                 } else {
-                    document.getElementById('systemStatus').textContent = 'SYSTEM ERROR';
-                    document.getElementById('connectionStatus').textContent = 'HOST DISCONNECTED';
+                    updateSystemStatus(false);
                 }
 
                 // 统计数据
@@ -811,7 +1390,12 @@
                     document.getElementById('totalProcessed').textContent = (stats.total_requests || 0).toLocaleString();
                     document.getElementById('systemEfficiency').textContent = (stats.success_rate || 100).toFixed(1) + '%';
                     document.getElementById('responseTime').textContent = ((stats.avg_time || 0) * 1000).toFixed(0) + 'ms';
-                    document.getElementById('dataVolume').textContent = formatDataSize(stats.total_requests * 1024 || 0);
+                    document.getElementById('dataVolume').textContent = formatDataSize(stats.data_volume || 0);
+                } else {
+                    // 如果统计数据获取失败，显示警告状态
+                    if (document.getElementById('systemStatus').textContent === 'SYSTEM ONLINE') {
+                        updateSystemStatus(true, 'warning');
+                    }
                 }
 
                 // 系统资源信息
@@ -822,26 +1406,39 @@
                     document.getElementById('memoryUsage').textContent = (system.memory_percent || 0).toFixed(1) + '%';
                 }
 
-                // 新增：审批系统统计
-                const approvalResponse = await fetch('/api/approval-stats');
-                if (approvalResponse.ok) {
-                    const approvalStats = await approvalResponse.json();
-                    document.getElementById('pendingApprovals').textContent = (approvalStats.pending_approvals || 0).toString();
-                    
-                    const totalReports = approvalStats.total_reports || 0;
-                    const approvedReports = approvalStats.approved_reports || 0;
-                    const approvalRate = totalReports > 0 ? ((approvedReports / totalReports) * 100).toFixed(1) : '100.0';
-                    document.getElementById('approvalRate').textContent = approvalRate + '%';
-                } else {
-                    // 如果审批系统未加载，显示默认值
+                // 审批系统统计
+                try {
+                    const approvalResponse = await fetch('/api/approval-stats');
+                    if (approvalResponse.ok) {
+                        const approvalStats = await approvalResponse.json();
+                        document.getElementById('pendingApprovals').textContent = (approvalStats.pending_approvals || 0).toString();
+                        
+                        const totalReports = approvalStats.total_reports || 0;
+                        const approvedReports = approvalStats.approved_reports || 0;
+                        const approvalRate = totalReports > 0 ? ((approvedReports / totalReports) * 100).toFixed(1) : '100.0';
+                        document.getElementById('approvalRate').textContent = approvalRate + '%';
+                    } else {
+                        document.getElementById('pendingApprovals').textContent = '0';
+                        document.getElementById('approvalRate').textContent = '100%';
+                    }
+                } catch (e) {
                     document.getElementById('pendingApprovals').textContent = '0';
                     document.getElementById('approvalRate').textContent = '100%';
                 }
 
             } catch (error) {
                 console.error('监控数据加载失败:', error);
-                document.getElementById('systemStatus').textContent = 'SYSTEM OFFLINE';
-                document.getElementById('connectionStatus').textContent = 'HOST DISCONNECTED';
+                updateSystemStatus(false);
+                
+                // 设置默认值
+                document.getElementById('totalProcessed').textContent = '0';
+                document.getElementById('systemEfficiency').textContent = '0%';
+                document.getElementById('responseTime').textContent = '0ms';
+                document.getElementById('dataVolume').textContent = '0 B';
+                document.getElementById('cpuUsage').textContent = '0%';
+                document.getElementById('memoryUsage').textContent = '0%';
+                document.getElementById('pendingApprovals').textContent = '0';
+                document.getElementById('approvalRate').textContent = '0%';
             }
         }
 
@@ -852,156 +1449,6 @@
             const sizes = ['B', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
-        }
-
-        // 显示上位机接口信息
-        function showHostInterface() {
-            alert(`上位机接口模块\n\n支持协议:\n• Modbus TCP/IP\n• OPC UA\n• HTTP/HTTPS API\n• WebSocket实时通信\n\n数据格式:\n• JSON\n• XML\n• Binary\n\n状态: 待连接`);
-        }
-
-        // 新增：显示审批系统演示
-        function showApprovalDemo() {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-                animation: fadeIn 0.3s ease-out;
-            `;
-
-            modal.innerHTML = `
-                <div style="
-                    background: linear-gradient(135deg, #1a2f1a 0%, #0a0f0a 100%);
-                    border: 2px solid #00ff41;
-                    border-radius: 16px;
-                    padding: 40px;
-                    max-width: 600px;
-                    width: 90%;
-                    color: #e0ffe0;
-                    font-family: 'Courier New', monospace;
-                    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
-                    position: relative;
-                ">
-                    <button onclick="this.closest('div').parentElement.remove()" style="
-                        position: absolute;
-                        top: 15px;
-                        right: 20px;
-                        background: none;
-                        border: none;
-                        color: #00ff41;
-                        font-size: 24px;
-                        cursor: pointer;
-                        padding: 5px;
-                    ">✕</button>
-                    
-                    <h2 style="
-                        color: #00ff41;
-                        text-align: center;
-                        margin-bottom: 25px;
-                        font-size: 24px;
-                        text-shadow: 0 0 10px #00ff41;
-                    ">📋 实验审批系统</h2>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="color: #00cc33; margin-bottom: 10px;">🔧 主要功能</h3>
-                        <ul style="line-height: 1.6; padding-left: 20px;">
-                            <li><strong>PDF报告生成:</strong> 自动生成带水印的实验报告</li>
-                            <li><strong>邮件审批流程:</strong> 发送包含审批按钮的HTML邮件</li>
-                            <li><strong>局域网安全:</strong> 仅限内网访问，IP地址验证</li>
-                            <li><strong>一次性Token:</strong> 30分钟有效期，使用后失效</li>
-                            <li><strong>审批记录:</strong> 完整的操作日志和审计追踪</li>
-                            <li><strong>上位机集成:</strong> C#/.NET API接口支持</li>
-                        </ul>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="color: #00cc33; margin-bottom: 10px;">🔌 API接口</h3>
-                        <div style="background: rgba(0, 255, 65, 0.1); padding: 15px; border-radius: 8px; font-size: 12px;">
-                            <strong>提交审批:</strong> POST /approval/submit_report<br>
-                            <strong>查询状态:</strong> GET /approval/status/{report_id}<br>
-                            <strong>系统测试:</strong> GET /approval/test<br>
-                            <strong>审批统计:</strong> GET /api/approval-stats
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 25px;">
-                        <h3 style="color: #00cc33; margin-bottom: 10px;">🛡️ 安全特性</h3>
-                        <ul style="line-height: 1.6; padding-left: 20px; font-size: 14px;">
-                            <li>仅限192.168.x.x等内网IP访问</li>
-                            <li>审批链接包含唯一UUID Token</li>
-                            <li>操作前强制二次确认</li>
-                            <li>记录IP、时间、用户代理等信息</li>
-                            <li>驳回必须填写详细原因</li>
-                        </ul>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                        <a href="/docs#/实验审批系统" target="_blank" style="
-                            display: inline-block;
-                            padding: 12px 24px;
-                            background: linear-gradient(45deg, #003d10, #00cc33);
-                            color: #e0ffe0;
-                            text-decoration: none;
-                            border: 2px solid #00ff41;
-                            border-radius: 6px;
-                            font-weight: bold;
-                            margin: 0 10px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(0,255,65,0.3)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
-                            📚 查看API文档
-                        </a>
-                        <a href="/approval/test" target="_blank" style="
-                            display: inline-block;
-                            padding: 12px 24px;
-                            background: transparent;
-                            color: #00ff41;
-                            text-decoration: none;
-                            border: 2px solid #00ff41;
-                            border-radius: 6px;
-                            font-weight: bold;
-                            margin: 0 10px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.background='rgba(0,255,65,0.1)'" onmouseout="this.style.background='transparent'">
-                            🧪 系统测试
-                        </a>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-
-            // 添加淡入动画
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `;
-            document.head.appendChild(style);
-
-            // 点击背景关闭
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-
-            // ESC键关闭
-            const handleEsc = function(e) {
-                if (e.key === 'Escape') {
-                    modal.remove();
-                    document.removeEventListener('keydown', handleEsc);
-                }
-            };
-            document.addEventListener('keydown', handleEsc);
         }
 
         // 平滑滚动
@@ -1015,13 +1462,32 @@
             }
         }
 
-        // 添加点击事件监听
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
-                e.preventDefault();
-                smoothScroll(e.target.getAttribute('href'));
-            }
-        });
+        // 模拟数据更新闪烁效果
+        function simulateDataUpdate() {
+            const updateElements = [
+                'totalProcessed',
+                'systemEfficiency', 
+                'responseTime',
+                'dataVolume',
+                'cpuUsage',
+                'memoryUsage',
+                'pendingApprovals',
+                'approvalRate'
+            ];
+            
+            updateElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element && element.textContent !== '-') {
+                    element.style.color = '#ffffff';
+                    element.style.textShadow = '0 0 15px #00ff41';
+                    
+                    setTimeout(() => {
+                        element.style.color = 'var(--primary-green)';
+                        element.style.textShadow = '0 0 10px var(--primary-green)';
+                    }, 200);
+                }
+            });
+        }
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -1033,6 +1499,9 @@
             
             // 每10秒更新监控数据
             setInterval(loadMonitoringData, 10000);
+            
+            // 每5秒模拟数据更新闪烁
+            setInterval(simulateDataUpdate, 5000);
             
             // 初始化监控值显示
             const monitorValues = document.querySelectorAll('.monitor-value');
@@ -1049,104 +1518,42 @@
                 });
             }, 2000);
 
-            // 新增：显示审批系统加载提示
-            setTimeout(() => {
-                const approvalCard = document.querySelector('.module-card:nth-child(4)');
-                if (approvalCard) {
-                    approvalCard.style.animation = 'newFeatureHighlight 3s ease-in-out';
+            // 添加点击事件监听器用于平滑滚动
+            document.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                    e.preventDefault();
+                    smoothScroll(e.target.getAttribute('href'));
                 }
-            }, 3000);
+            });
         });
 
         // 窗口大小改变时重新创建粒子
         window.addEventListener('resize', function() {
-            const dataStream = document.getElementById('dataStream');
-            dataStream.innerHTML = '';
             createDataStream();
         });
 
-        // 模拟实时数据更新
-        function simulateDataUpdate() {
-            const updateElements = [
-                'totalProcessed',
-                'systemEfficiency', 
-                'responseTime',
-                'dataVolume',
-                'cpuUsage',
-                'memoryUsage',
-                'pendingApprovals',
-                'approvalRate'
-            ];
-            
-            updateElements.forEach(id => {
-                const element = document.getElementById(id);
-                if (element && element.textContent !== '-') {
-                    // 添加数据更新闪烁效果
-                    element.style.color = '#ffffff';
-                    element.style.textShadow = '0 0 15px #00ff41';
-                    
-                    setTimeout(() => {
-                        element.style.color = 'var(--primary-green)';
-                        element.style.textShadow = '0 0 10px var(--primary-green)';
-                    }, 200);
-                }
-            });
+        // 页面可见性API - 节省资源
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                loadMonitoringData();
+            }
+        });
+
+        // 错误处理
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
+
+        // 检查浏览器兼容性
+        if (!window.fetch) {
+            console.warn('浏览器版本较旧，部分功能可能无法正常使用');
         }
 
-        // 每5秒模拟数据更新闪烁
-        setInterval(simulateDataUpdate, 5000);
-
-        // 新增：审批系统特殊动画
-        const newFeatureStyle = document.createElement('style');
-        newFeatureStyle.textContent = `
-            @keyframes newFeatureHighlight {
-                0%, 100% { 
-                    transform: translateY(0);
-                    box-shadow: 0 10px 30px var(--glow-green);
-                }
-                25% { 
-                    transform: translateY(-8px);
-                    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
-                }
-                50% { 
-                    transform: translateY(-5px);
-                    box-shadow: 0 20px 50px rgba(0, 255, 65, 0.5);
-                }
-                75% { 
-                    transform: translateY(-8px);
-                    box-shadow: 0 15px 40px rgba(0, 255, 65, 0.4);
-                }
-            }
-        `;
-        document.head.appendChild(newFeatureStyle);
-
-        // 检测审批系统状态
-        async function checkApprovalSystemStatus() {
-            try {
-                const response = await fetch('/approval/test');
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ 审批系统状态:', data.status);
-                    
-                    // 更新状态显示
-                    const approvalCard = document.querySelector('.module-card:nth-child(4) .module-status .console-text');
-                    if (approvalCard && data.status === 'OPERATIONAL') {
-                        approvalCard.textContent = 'STATUS: OPERATIONAL';
-                    }
-                } else {
-                    console.warn('⚠️ 审批系统未响应');
-                    const approvalCard = document.querySelector('.module-card:nth-child(4) .module-status .console-text');
-                    if (approvalCard) {
-                        approvalCard.textContent = 'STATUS: OFFLINE';
-                    }
-                }
-            } catch (error) {
-                console.error('❌ 审批系统检查失败:', error);
-            }
-        }
-
-        // 页面加载后检查审批系统状态
-        setTimeout(checkApprovalSystemStatus, 2000);
+        // 性能监控
+        window.addEventListener('load', function() {
+            const loadTime = performance.now();
+            console.log(`页面加载时间: ${loadTime.toFixed(2)}ms`);
+        });
     </script>
 </body>
 </html>

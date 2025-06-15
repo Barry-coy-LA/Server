@@ -1,4 +1,4 @@
-# app/routers/approval.py - 实验审批系统路由
+# app/routers/approval.py - 修复版本：解决重复初始化问题
 from fastapi import APIRouter, HTTPException, Request, Form, Query, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -11,23 +11,48 @@ import uuid
 import os
 from pathlib import Path
 
-from app.services.approval_service import ApprovalService
-from app.services.pdf_generator import PDFGenerator
-from app.services.email_sender import EmailSender
-from app.services.usage_tracker import track_usage_simple, ServiceType
+# 这里不再直接导入服务，而是从main.py获取全局实例
 from app.schemas.approval import (
     SubmitReportRequest, 
     SubmitReportResponse,
     ApprovalActionResponse
 )
+from app.services.usage_tracker import track_usage_simple, ServiceType
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/approval", tags=["实验审批系统"])
 
-# 初始化服务
-approval_service = ApprovalService()
-pdf_generator = PDFGenerator()
-email_sender = EmailSender()
+# 全局变量来存储服务实例（将由main.py设置）
+approval_service = None
+pdf_generator = None
+email_sender = None
+
+def get_approval_service():
+    """获取审批服务实例"""
+    global approval_service
+    if approval_service is None:
+        from app.services.approval_service import ApprovalService
+        approval_service = ApprovalService()
+        logger.info("初始化审批服务实例")
+    return approval_service
+
+def get_pdf_generator():
+    """获取PDF生成器实例"""
+    global pdf_generator
+    if pdf_generator is None:
+        from app.services.pdf_generator import PDFGenerator
+        pdf_generator = PDFGenerator()
+        logger.info("初始化PDF生成器实例")
+    return pdf_generator
+
+def get_email_sender():
+    """获取邮件发送器实例"""
+    global email_sender
+    if email_sender is None:
+        from app.services.email_sender import EmailSender
+        email_sender = EmailSender()
+        logger.info("初始化邮件发送器实例")
+    return email_sender
 
 # 模板引擎
 templates = Jinja2Templates(directory="app/templates")
@@ -77,9 +102,14 @@ async def submit_report(
                 detail="仅允许内网访问"
             )
         
-        # 2. 生成PDF报告
+        # 2. 获取服务实例
+        approval_svc = get_approval_service()
+        pdf_gen = get_pdf_generator()
+        email_snd = get_email_sender()
+        
+        # 3. 生成PDF报告
         logger.info(f"[APPROVAL] 开始生成PDF报告 - {report_data.report_id}")
-        pdf_path = await pdf_generator.generate_report_pdf(
+        pdf_path = await pdf_gen.generate_report_pdf(
             report_id=report_data.report_id,
             title=report_data.title,
             content=report_data.content,
@@ -87,8 +117,8 @@ async def submit_report(
             operator=report_data.operator
         )
         
-        # 3. 创建审批记录和Token
-        approval_record = await approval_service.create_approval_request(
+        # 4. 创建审批记录和Token
+        approval_record = await approval_svc.create_approval_request(
             report_id=report_data.report_id,
             title=report_data.title,
             content=report_data.content,
@@ -98,9 +128,9 @@ async def submit_report(
             client_ip=request.client.host
         )
         
-        # 4. 发送审批邮件
+        # 5. 发送审批邮件
         logger.info(f"[APPROVAL] 发送审批邮件到: {report_data.approver_email}")
-        await email_sender.send_approval_email(
+        await email_snd.send_approval_email(
             to_email=report_data.approver_email,
             report_id=report_data.report_id,
             title=report_data.title,
@@ -164,8 +194,11 @@ async def approve_report(
                 }
             )
         
+        # 获取审批服务实例
+        approval_svc = get_approval_service()
+        
         # 验证Token
-        approval_record = await approval_service.get_approval_by_token(token, 'approve')
+        approval_record = await approval_svc.get_approval_by_token(token, 'approve')
         
         if not approval_record:
             return templates.TemplateResponse(
@@ -211,7 +244,7 @@ async def approve_report(
             )
         
         # 执行审批通过
-        await approval_service.process_approval(
+        await approval_svc.process_approval(
             approval_record,
             action='approved',
             ip_address=request.client.host,
@@ -266,8 +299,11 @@ async def reject_report(
                 }
             )
         
+        # 获取审批服务实例
+        approval_svc = get_approval_service()
+        
         # 验证Token
-        approval_record = await approval_service.get_approval_by_token(token, 'reject')
+        approval_record = await approval_svc.get_approval_by_token(token, 'reject')
         
         if not approval_record:
             return templates.TemplateResponse(
@@ -313,7 +349,7 @@ async def reject_report(
             )
         
         # 执行审批驳回
-        await approval_service.process_approval(
+        await approval_svc.process_approval(
             approval_record,
             action='rejected',
             ip_address=request.client.host,
@@ -367,7 +403,10 @@ async def get_approval_status(
         if not validate_internal_ip(request):
             raise HTTPException(status_code=403, detail="仅允许内网访问")
         
-        approval_record = await approval_service.get_approval_by_report_id(report_id)
+        # 获取审批服务实例
+        approval_svc = get_approval_service()
+        
+        approval_record = await approval_svc.get_approval_by_report_id(report_id)
         
         if not approval_record:
             raise HTTPException(status_code=404, detail="未找到审批记录")
@@ -420,3 +459,18 @@ async def test_approval_system():
     except Exception as e:
         logger.error(f"[APPROVAL] 审批系统测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"系统异常: {str(e)}")
+
+# 设置全局服务实例的函数（由main.py调用）
+def set_approval_service_instance(service_instance):
+    """设置全局审批服务实例"""
+    global approval_service
+    approval_service = service_instance
+    logger.info("设置全局审批服务实例")
+
+# 初始化时获取服务实例
+def initialize_services():
+    """初始化所有服务实例"""
+    get_approval_service()
+    get_pdf_generator()
+    get_email_sender()
+    logger.info("所有审批相关服务已初始化")

@@ -1,4 +1,4 @@
-# app/main.py - 支持局域网访问的服务器配置（更新版本）
+# app/main.py - 修复版本：解决重复初始化和局域网访问问题
 import sys
 import os
 import socket
@@ -154,13 +154,17 @@ def setup_logging():
 setup_logging()
 logger = logging.getLogger("TianMu-AGI-Lab")
 
-# ========== 尝试导入模块 ==========
+# ========== 全局服务实例（避免重复初始化）==========
 admin_router = None
 usage_tracker = None
 ocr_router = None
 face_router = None
 approval_router = None
 
+# 全局审批服务实例
+approval_service_instance = None
+
+# ========== 尝试导入模块 ==========
 try:
     from app.routers.admin import router as admin_router
     logger.info("✅ 管理后台模块已加载")
@@ -187,6 +191,9 @@ except ImportError as e:
 
 try:
     from app.routers.approval import router as approval_router
+    # 创建全局审批服务实例
+    from app.services.approval_service import ApprovalService
+    approval_service_instance = ApprovalService()
     logger.info("✅ 实验审批系统已加载")
 except ImportError as e:
     logger.warning(f"⚠️ 无法加载实验审批系统: {e}")
@@ -459,11 +466,9 @@ async def industrial_health_check():
 async def get_approval_stats():
     """获取审批系统统计信息（公开接口）"""
     try:
-        if approval_router:
-            from app.services.approval_service import ApprovalService
-            approval_service = ApprovalService()
-            
-            stats = await approval_service.get_approval_statistics()
+        if approval_router and approval_service_instance:
+            # 使用全局实例，避免重复初始化
+            stats = await approval_service_instance.get_approval_statistics()
             
             return {
                 "total_reports": stats.total_reports,
@@ -524,12 +529,10 @@ async def startup_industrial_system():
         else:
             logger.warning("[STARTUP] ⚠️ 数据追踪系统未加载")
         
-        # 初始化审批系统
-        if approval_router:
+        # 初始化审批系统（使用全局实例）
+        if approval_router and approval_service_instance:
             try:
-                from app.services.approval_service import ApprovalService
-                approval_service = ApprovalService()
-                await approval_service._ensure_cache_initialized()
+                await approval_service_instance._ensure_cache_initialized()
                 logger.info("[STARTUP] ✅ 实验审批系统已启动")
             except Exception as e:
                 logger.warning(f"[STARTUP] ⚠️ 审批系统初始化失败: {e}")
