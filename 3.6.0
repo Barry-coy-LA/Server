@@ -1,0 +1,7 @@
+Collecting reportlab
+  Downloading reportlab-4.4.1-py3-none-any.whl.metadata (1.8 kB)
+Requirement already satisfied: pillow>=9.0.0 in c:\users\tm-admin\miniconda3\envs\paddleocr\lib\site-packages (from reportlab) (11.2.1)
+Collecting chardet (from reportlab)
+  Using cached chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+Downloading reportlab-4.4.1-py3-none-any.whl (2.0 MB)
+   -----                                    0.3/2.0 MB ? eta -:--:--

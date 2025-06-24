@@ -1,0 +1,102 @@
+{
+  "qwen_api": {
+    "api_key": "csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54",
+    "api_url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+    "model": "qwen-plus",
+    "temperature": 0.1,
+    "max_tokens": 3000,
+    "timeout": 60.0
+  },
+  "mcp_server": {
+    "url": "http://localhost:8001",
+    "timeout": 30.0,
+    "retry_attempts": 3,
+    "auto_start": false
+  },
+  "features": {
+    "cot_prompts": true,
+    "physics_validation": true,
+    "unit_conversion": true,
+    "multi_language": true,
+    "ocr_integration": true
+  },
+  "test_types": {
+    "耐久测试": {
+      "required_params": [
+        "吸气压力",
+        "排气压力",
+        "电压",
+        "过热度",
+        "过冷度",
+        "转速",
+        "环温",
+        "低温停留时间"
+      ],
+      "tolerances": {
+        "suction": 0.01,
+        "discharge": 0.02
+      }
+    },
+    "性能测试": {
+      "required_params": [
+        "吸气压力",
+        "排气压力",
+        "电压",
+        "转速",
+        "环温"
+      ],
+      "tolerances": {
+        "suction": 0.005,
+        "discharge": 0.01
+      }
+    },
+    "热工测试": {
+      "required_params": [
+        "温度范围",
+        "温度变化率",
+        "保温时间"
+      ],
+      "tolerances": {
+        "suction": 0.01,
+        "discharge": 0.02
+      }
+    },
+    "压力测试": {
+      "required_params": [
+        "测试压力",
+        "保压时间",
+        "压力变化率"
+      ],
+      "tolerances": {
+        "suction": 0.005,
+        "discharge": 0.01
+      }
+    },
+    "振动测试": {
+      "required_params": [
+        "振动频率",
+        "振动幅值",
+        "测试时间"
+      ],
+      "tolerances": {
+        "suction": 0.01,
+        "discharge": 0.02
+      }
+    }
+  },
+  "validation_rules": {
+    "pressure_ratio_max": 50,
+    "pressure_ratio_min": 1.5,
+    "temp_change_rate_max": 10,
+    "temp_range_min": -100,
+    "temp_range_max": 200,
+    "speed_range_min": 10,
+    "speed_range_max": 20000,
+    "time_consistency_tolerance": 0.05
+  },
+  "languages": {
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語"
+  }
+}

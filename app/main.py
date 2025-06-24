@@ -1,4 +1,4 @@
-# app/main.py - 修复版本：解决重复初始化和局域网访问问题
+# app/main.py - 集成工况识别功能
 import sys
 import os
 import socket
@@ -36,47 +36,16 @@ def get_local_ip() -> str:
         s.close()
         return local_ip
     except Exception:
-        # 如果获取失败，尝试其他方法
-        try:
-            hostname = socket.gethostname()
-            local_ip = socket.gethostbyname(hostname)
-            if local_ip.startswith("127."):
-                # 如果是回环地址，尝试获取所有网络接口
-                import netifaces
-                for interface in netifaces.interfaces():
-                    addresses = netifaces.ifaddresses(interface)
-                    if netifaces.AF_INET in addresses:
-                        for addr in addresses[netifaces.AF_INET]:
-                            ip = addr['addr']
-                            if ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'):
-                                return ip
-        except ImportError:
-            pass
         return "192.168.1.100"  # 默认值
 
 def get_all_local_ips() -> list:
     """获取所有本机IP地址"""
     ips = []
     try:
-        # 获取所有网络接口
-        for interface_name in socket.if_nameindex():
-            interface = interface_name[1]
-            try:
-                addresses = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
-                for addr in addresses:
-                    ip = addr[4][0]
-                    if not ip.startswith('127.') and ip not in ips:
-                        ips.append(ip)
-            except:
-                continue
-                
-        # 备用方法
-        if not ips:
-            hostname = socket.gethostname()
-            local_ip = socket.gethostbyname(hostname)
-            if not local_ip.startswith('127.'):
-                ips.append(local_ip)
-                
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        if not local_ip.startswith('127.'):
+            ips.append(local_ip)
     except Exception as e:
         logging.warning(f"获取IP地址失败: {e}")
     
@@ -160,6 +129,8 @@ usage_tracker = None
 ocr_router = None
 face_router = None
 approval_router = None
+workload_router = None  # 新增工况识别路由
+cerebras_router = None  # 新增Cerebras路由
 
 # 全局审批服务实例
 approval_service_instance = None
@@ -198,11 +169,23 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ 无法加载实验审批系统: {e}")
 
+try:
+    from app.routers.workload import router as workload_router
+    logger.info("✅ 工况识别模块已加载")
+except ImportError as e:
+    logger.warning(f"⚠️ 无法加载工况识别模块: {e}")
+
+try:
+    from app.routers.cerebras import router as cerebras_router
+    logger.info("✅ Cerebras模块已加载")
+except ImportError as e:
+    logger.warning(f"⚠️ 无法加载Cerebras模块: {e}")
+
 # ========== 应用初始化 ==========
 app = FastAPI(
     title="TianMu工业AGI试验台",
-    description="先进制造业人工通用智能平台 - 支持OCR识别、计算机视觉、智能分析、实验审批",
-    version="2.1.0",
+    description="先进制造业人工通用智能平台 - 支持OCR识别、计算机视觉、智能分析、实验审批、工况识别",
+    version="2.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
@@ -210,7 +193,9 @@ app = FastAPI(
         {"name": "AGI模块", "description": "人工通用智能核心功能"},
         {"name": "监控系统", "description": "实时监控和系统状态"},
         {"name": "管理后台", "description": "系统管理和配置界面"},
-        {"name": "实验审批系统", "description": "局域网邮件审批流程"}
+        {"name": "实验审批系统", "description": "局域网邮件审批流程"},
+        {"name": "工况识别", "description": "智能工况识别与分析"},
+        {"name": "LLM服务", "description": "大语言模型服务"}
     ]
 )
 
@@ -250,6 +235,14 @@ if face_router:
 if approval_router:
     app.include_router(approval_router, tags=["实验审批系统"])
     logger.info("✅ 实验审批系统路由已注册")
+
+if workload_router:
+    app.include_router(workload_router, prefix="/workload", tags=["工况识别"])
+    logger.info("✅ 工况识别路由已注册")
+
+if cerebras_router:
+    app.include_router(cerebras_router, prefix="/cerebras", tags=["LLM服务"])
+    logger.info("✅ Cerebras路由已注册")
 
 # ========== 网络信息接口 ==========
 @app.get("/api/network-info", summary="网络信息", tags=["监控系统"])
@@ -293,7 +286,7 @@ async def industrial_console():
         local_ips = get_all_local_ips()
         return JSONResponse(content={
             "system": "TianMu工业AGI试验台",
-            "version": "2.1.0",
+            "version": "2.2.0",
             "status": "INTERFACE_MISSING",
             "message": "工业控制台界面文件不存在",
             "required_file": "app/static/index.html",
@@ -309,6 +302,8 @@ async def industrial_console():
                 "OCR_SERVICE": "/ocr/table" if ocr_router else "未加载",
                 "FACE_SERVICE": "/face/register" if face_router else "未加载",
                 "APPROVAL_SERVICE": "/approval/test" if approval_router else "未加载",
+                "WORKLOAD_SERVICE": "/workload/status" if workload_router else "未加载",
+                "CEREBRAS_SERVICE": "/cerebras/status" if cerebras_router else "未加载",
                 "NETWORK_INFO": "/api/network-info"
             },
             "setup_guide": [
@@ -317,6 +312,29 @@ async def industrial_console():
                 "3. 重启AGI试验台系统"
             ]
         })
+
+# ========== 工况识别集成接口 ==========
+@app.post("/api/ocr-to-workload", summary="OCR到工况识别", tags=["工业接口"])
+async def ocr_to_workload_recognition(request: Request):
+    """OCR识别后直接进行工况识别的集成接口"""
+    try:
+        from fastapi import UploadFile, File, Form
+        import tempfile
+        import os
+        
+        # 这里应该接收文件上传，简化为演示
+        return JSONResponse(content={
+            "message": "OCR到工况识别集成接口",
+            "description": "上传图片 -> OCR识别 -> 工况识别 -> 返回JSON结果",
+            "available": workload_router is not None and ocr_router is not None,
+            "endpoints": {
+                "step1": "/ocr/table - OCR识别",
+                "step2": "/workload/recognize/ocr - 工况识别"
+            }
+        })
+    except Exception as e:
+        logger.error(f"OCR到工况识别失败: {e}")
+        raise HTTPException(500, f"集成接口失败: {str(e)}")
 
 # ========== 其他路由保持不变 ==========
 @app.get("/api/public-stats", summary="生产统计数据", tags=["监控系统"])
@@ -340,7 +358,11 @@ async def get_production_stats():
                 "data_volume": stats.get("total_file_size", 0),
                 "status": "OPERATIONAL",
                 "timestamp": datetime.now().isoformat(),
-                "shift": get_current_shift()
+                "shift": get_current_shift(),
+                "new_features": {
+                    "workload_recognition": workload_router is not None,
+                    "cerebras_llm": cerebras_router is not None
+                }
             }
         else:
             return {
@@ -413,6 +435,8 @@ async def industrial_health_check():
             "BIOMETRIC_SECURITY": "OPERATIONAL" if face_router else "NOT_LOADED",
             "USAGE_TRACKER": "OPERATIONAL" if usage_tracker else "NOT_LOADED",
             "APPROVAL_SYSTEM": "OPERATIONAL" if approval_router else "NOT_LOADED",
+            "WORKLOAD_RECOGNITION": "OPERATIONAL" if workload_router else "NOT_LOADED",
+            "CEREBRAS_LLM": "OPERATIONAL" if cerebras_router else "NOT_LOADED",
             "MONITORING_SYSTEM": "OPERATIONAL"
         }
         
@@ -450,7 +474,7 @@ async def industrial_health_check():
                 "primary_ip": get_local_ip(),
                 "hostname": socket.gethostname()
             },
-            "version": "2.1.0",
+            "version": "2.2.0",
             "timestamp": datetime.now().isoformat(),
             "environment": "INDUSTRIAL"
         }
@@ -537,6 +561,16 @@ async def startup_industrial_system():
             except Exception as e:
                 logger.warning(f"[STARTUP] ⚠️ 审批系统初始化失败: {e}")
         
+        # 初始化工况识别系统
+        if workload_router:
+            try:
+                from app.services.workload_recognition_service import get_workload_service
+                workload_service = get_workload_service()
+                status = workload_service.get_service_status()
+                logger.info(f"[STARTUP] ✅ 工况识别系统已启动，支持 {status['total_llm_count']} 个LLM")
+            except Exception as e:
+                logger.warning(f"[STARTUP] ⚠️ 工况识别系统初始化失败: {e}")
+        
         # 检查系统资源
         cpu_count = psutil.cpu_count()
         memory_gb = psutil.virtual_memory().total / (1024**3)
@@ -559,6 +593,10 @@ async def startup_industrial_system():
             loaded_modules.append("生物识别")
         if approval_router:
             loaded_modules.append("实验审批")
+        if workload_router:
+            loaded_modules.append("工况识别")
+        if cerebras_router:
+            loaded_modules.append("Cerebras")
         if usage_tracker:
             loaded_modules.append("使用追踪")
         
@@ -579,6 +617,10 @@ async def startup_industrial_system():
             logger.info("[ENDPOINTS] 🔒 生物识别: /face/register")
         if approval_router:
             logger.info("[ENDPOINTS] 📋 实验审批: /approval/test")
+        if workload_router:
+            logger.info("[ENDPOINTS] 🏭 工况识别: /workload/status")
+        if cerebras_router:
+            logger.info("[ENDPOINTS] 🚀 Cerebras LLM: /cerebras/status")
         logger.info("[ENDPOINTS] 📚 系统文档: /docs")
         logger.info("[ENDPOINTS] 🔍 健康监控: /health")
         logger.info("[ENDPOINTS] 📊 系统监控: /api/system-monitor")
@@ -588,6 +630,7 @@ async def startup_industrial_system():
         logger.info("=" * 60)
         logger.info("[SYSTEM] 🚀 TianMu工业AGI试验台启动完成")
         logger.info("[SYSTEM] 🔗 局域网内其他设备可通过以上地址访问")
+        logger.info("[SYSTEM] 🏭 新增工况识别功能，支持多LLM智能分析")
         logger.info("=" * 60)
         
     except Exception as e:
@@ -626,6 +669,10 @@ async def industrial_not_found_handler(request, exc):
         available_endpoints.append("/face/register")
     if approval_router:
         available_endpoints.extend(["/approval/test", "/approval/submit_report"])
+    if workload_router:
+        available_endpoints.extend(["/workload/status", "/workload/test"])
+    if cerebras_router:
+        available_endpoints.append("/cerebras/status")
     
     return JSONResponse(
         status_code=404,
@@ -696,6 +743,10 @@ if __name__ == "__main__":
         print(f"   🔒 生物识别: http://{primary_ip}:{port}/face/register")
     if approval_router:
         print(f"   📋 实验审批: http://{primary_ip}:{port}/approval/test")
+    if workload_router:
+        print(f"   🏭 工况识别: http://{primary_ip}:{port}/workload/status")
+    if cerebras_router:
+        print(f"   🚀 Cerebras LLM: http://{primary_ip}:{port}/cerebras/status")
     print(f"   📚 系统文档: http://{primary_ip}:{port}/docs")
     print(f"   🔍 健康监控: http://{primary_ip}:{port}/health")
     print(f"   📊 系统监控: http://{primary_ip}:{port}/api/system-monitor")
@@ -706,7 +757,8 @@ if __name__ == "__main__":
     print("💡 局域网配置说明:")
     print("   • 服务绑定到 0.0.0.0，局域网内所有设备可访问")
     print("   • 确保防火墙允许端口访问")
-    print("   • 审批系统仅限内网IP访问，安全可靠")
+    print("   • 工况识别支持Qwen3+Cerebras多LLM智能分析")
+    print("   • MCP服务器独立部署，单独启动")
     print("   • 支持手机、平板、电脑等多设备访问")
     print()
     print("🏭 " + "="*70 + " 🏭")
