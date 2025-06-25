@@ -1,8 +1,7 @@
-# mcp_server/main.py - 修复Windows编码问题
+# app/mcp_server/main.py
 """
 MCP (Model Context Protocol) 独立服务器
 提供计算器和JSON构建工具服务
-独立部署，不依赖主应用
 """
 
 import json
@@ -18,15 +17,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-# 设置控制台编码为UTF-8（Windows兼容性）
+# 设置UTF-8编码（解决Windows中文显示问题）
 if sys.platform.startswith('win'):
     import codecs
     sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
     sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
-
-# 添加项目根目录到Python路径，以便导入共享模块
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, encoding='utf-8')
@@ -37,7 +32,7 @@ MCP_PORT = int(os.environ.get('MCP_PORT', 8001))
 
 app = FastAPI(
     title="MCP工具服务器",
-    description="为工况识别提供计算器和JSON构建工具 - 独立部署版本",
+    description="为工况识别提供计算器和JSON构建工具",
     version="1.0.0"
 )
 
@@ -62,14 +57,6 @@ class ToolResponse(BaseModel):
     errors: List[str] = []
     processing_time: float = 0.0
 
-class UnitConversionRequest(BaseModel):
-    """单位转换请求"""
-    parameters: Dict[str, Any]
-
-class PhysicsValidationRequest(BaseModel):
-    """物理校验请求"""
-    parameters: Dict[str, Any]
-
 class JsonBuilderRequest(BaseModel):
     """JSON构建请求"""
     test_type: str
@@ -84,12 +71,8 @@ class UnitConverter:
     UNITS = {
         "pressure": {
             "MPa": 1.0,
-            "Mpa": 1.0,  # 常见拼写
-            "mpa": 1.0,
             "kPa": 0.001,
-            "kpa": 0.001,
             "Pa": 0.000001,
-            "pa": 0.000001,
             "psi": 0.00689476,
             "bar": 0.1,
             "atm": 0.101325
@@ -97,15 +80,12 @@ class UnitConverter:
         "temperature": {
             "°C": {"offset": 0, "scale": 1},
             "℃": {"offset": 0, "scale": 1},
-            "C": {"offset": 0, "scale": 1},
             "K": {"offset": -273.15, "scale": 1},
             "°F": {"offset": -32, "scale": 5/9}
         },
         "time": {
             "s": 1.0,
-            "sec": 1.0,
             "min": 60.0,
-            "minute": 60.0,
             "h": 3600.0,
             "hour": 3600.0,
             "day": 86400.0
@@ -118,15 +98,12 @@ class UnitConverter:
         },
         "voltage": {
             "V": 1.0,
-            "v": 1.0,
             "kV": 1000.0,
-            "kv": 1000.0,
-            "mV": 0.001,
-            "mv": 0.001
+            "mV": 0.001
         }
     }
     
-    def detect_unit_and_value(self, text: str) -> tuple[float, str, str]:
+    def detect_unit_and_value(self, text: str) -> tuple:
         """检测文本中的数值、单位和类型"""
         if not isinstance(text, str):
             return 0.0, "", "unknown"
@@ -135,7 +112,7 @@ class UnitConverter:
         text = text.strip().replace('（', '(').replace('）', ')')
         
         # 提取数值（包含±符号）
-        value_pattern = r'([\d.]+)(?:\s*[±+\-土]\s*[\d.]+)?'
+        value_pattern = r'([\d.]+)(?:\s*[±+\-]\s*[\d.]+)?'
         value_match = re.search(value_pattern, text)
         
         if not value_match:
@@ -172,7 +149,7 @@ class UnitConverter:
         for key, value in params.items():
             if isinstance(value, str):
                 val, unit, unit_type = self.detect_unit_and_value(value)
-                if unit_type != "unknown" and unit:
+                if unit_type != "unknown":
                     standard_val = self.convert_to_standard(val, unit, unit_type)
                     
                     # 添加标准单位后缀
@@ -185,16 +162,7 @@ class UnitConverter:
                     }
                     
                     if unit_type in standard_units:
-                        # 保留原始容差信息
-                        if "±" in value or "+-" in value or "土" in value:
-                            tolerance_match = re.search(r'[±+\-土]\s*([\d.]+)', value)
-                            if tolerance_match:
-                                tolerance = tolerance_match.group(1)
-                                standardized[key] = f"{standard_val:.6f}±{tolerance}{standard_units[unit_type]}"
-                            else:
-                                standardized[key] = f"{standard_val:.6f}{standard_units[unit_type]}"
-                        else:
-                            standardized[key] = f"{standard_val:.6f}{standard_units[unit_type]}"
+                        standardized[key] = f"{standard_val:.6f}{standard_units[unit_type]}"
                     else:
                         standardized[key] = standard_val
                 else:
@@ -221,7 +189,7 @@ class PhysicsValidator:
             discharge_val, _, _ = converter.detect_unit_and_value(discharge_pressure)
             
             if discharge_val <= suction_val:
-                self.errors.append(f"压力关系错误：排气压力({discharge_val:.3f})应大于吸气压力({suction_val:.3f})")
+                self.errors.append(f"压力关系错误：排气压力({discharge_val})应大于吸气压力({suction_val})")
                 return False
             
             # 检查压比是否合理（通常2-20之间）
@@ -249,15 +217,14 @@ class PhysicsValidator:
             theoretical_time_seconds = theoretical_time * 60  # rate是°C/min
             
             # 检查时间一致性（允许5%误差）
-            if theoretical_time_seconds > 0:
-                time_error = abs(duration - theoretical_time_seconds) / theoretical_time_seconds
-                
-                if time_error > 0.05:  # 5%误差
-                    self.errors.append(
-                        f"温度变化时间不一致：理论时间{theoretical_time_seconds:.0f}s，"
-                        f"实际时间{duration:.0f}s，误差{time_error*100:.1f}%"
-                    )
-                    return False
+            time_error = abs(duration - theoretical_time_seconds) / theoretical_time_seconds if theoretical_time_seconds > 0 else 0
+            
+            if time_error > 0.05:  # 5%误差
+                self.errors.append(
+                    f"温度变化时间不一致：理论时间{theoretical_time_seconds:.0f}s，"
+                    f"实际时间{duration:.0f}s，误差{time_error*100:.1f}%"
+                )
+                return False
             
             # 检查变化率合理性
             if abs(rate) > 10:
@@ -363,9 +330,7 @@ class JsonBuilder:
     def __init__(self):
         self.templates = {
             "耐久测试": self._endurance_template,
-            "性能测试": self._performance_template,
-            "热工测试": self._thermal_template,
-            "压力测试": self._pressure_template
+            "性能测试": self._performance_template
         }
     
     def build_workload_json(self, test_type: str, stages: List[Dict[str, Any]], 
@@ -381,8 +346,8 @@ class JsonBuilder:
         result = {
             "工况一": {
                 "试验类型": test_type,
-                "吸气压力判稳": f"{tolerances.get('suction', 0.01):.3f}MPa",
-                "排气压力判稳": f"{tolerances.get('discharge', 0.02):.3f}MPa", 
+                "吸气压力判稳": f"{tolerances.get('suction', 0.01)}MPa",
+                "排气压力判稳": f"{tolerances.get('discharge', 0.02)}MPa", 
                 "气压标准": "绝对压力",
                 "阶段总数": len(stages)
             }
@@ -423,25 +388,6 @@ class JsonBuilder:
             "持续时间": f"{stage_data.get('duration', 1800):.0f}s"
         }
     
-    def _thermal_template(self, stage_data: Dict[str, Any], stage_num: int) -> Dict[str, Any]:
-        """热工测试模板"""
-        return {
-            "初始温度": f"{stage_data.get('initial_temp', 20):.0f}℃",
-            "目标温度": f"{stage_data.get('target_temp', 20):.0f}℃",
-            "温度变化率": f"{stage_data.get('temp_change_rate', 0):.0f}℃/min",
-            "保温时间": f"{stage_data.get('duration', 3600):.0f}s",
-            "环境温度": stage_data.get('ambient_temp', '20℃±1°C')
-        }
-    
-    def _pressure_template(self, stage_data: Dict[str, Any], stage_num: int) -> Dict[str, Any]:
-        """压力测试模板"""
-        return {
-            "测试压力": f"{stage_data.get('discharge_pressure', 1.0):.1f}MPa",
-            "保压时间": f"{stage_data.get('duration', 1800):.0f}s",
-            "压力变化率": "0.01MPa/min",
-            "环境温度": stage_data.get('ambient_temp', '20℃±1°C')
-        }
-    
     def _default_template(self, stage_data: Dict[str, Any], stage_num: int) -> Dict[str, Any]:
         """默认模板"""
         return {
@@ -456,7 +402,7 @@ json_builder = JsonBuilder()
 
 # API端点
 @app.post("/tools/unit-converter", response_model=ToolResponse)
-async def unit_conversion_tool(request: UnitConversionRequest):
+async def unit_conversion_tool(request: ToolRequest):
     """单位转换工具"""
     start_time = datetime.now()
     
@@ -484,7 +430,7 @@ async def unit_conversion_tool(request: UnitConversionRequest):
         )
 
 @app.post("/tools/physics-validator", response_model=ToolResponse)
-async def physics_validation_tool(request: PhysicsValidationRequest):
+async def physics_validation_tool(request: ToolRequest):
     """物理校验工具"""
     start_time = datetime.now()
     
@@ -579,9 +525,7 @@ async def list_tools():
                 "endpoint": "/tools/json-builder",
                 "capabilities": [
                     "耐久测试JSON构建",
-                    "性能测试JSON构建",
-                    "热工测试JSON构建",
-                    "压力测试JSON构建"
+                    "性能测试JSON构建"
                 ]
             }
         ],
@@ -589,8 +533,7 @@ async def list_tools():
             "name": "MCP工具服务器",
             "version": "1.0.0",
             "status": "运行中",
-            "port": MCP_PORT,
-            "deployment": "独立部署"
+            "port": MCP_PORT
         }
     }
 
@@ -602,56 +545,39 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "tools_available": 3,
         "server": "MCP Tools Server",
-        "port": MCP_PORT,
-        "deployment": "独立部署版本"
+        "port": MCP_PORT
     }
 
 @app.get("/")
 async def root():
     """根路径"""
     return {
-        "message": "MCP工具服务器 - 独立部署版本",
+        "message": "MCP工具服务器",
         "version": "1.0.0",
         "port": MCP_PORT,
         "docs": "/docs",
         "tools": "/tools/list",
-        "health": "/health",
-        "description": "为TianMu工业AGI试验台提供单位转换、物理校验和JSON构建服务"
+        "health": "/health"
     }
 
-def safe_print(text):
-    """安全的打印函数，避免编码错误"""
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        # 将emoji替换为ASCII字符
-        safe_text = text.replace('🔧', '[TOOL]').replace('🚀', '[START]').replace('🌐', '[WEB]').replace('📚', '[DOCS]').replace('🔍', '[CHECK]').replace('🛠️', '[TOOLS]').replace('💡', '[TIP]')
-        print(safe_text)
-
 if __name__ == "__main__":
-    safe_print("[TOOL] " + "="*50 + " [TOOL]")
-    safe_print("[START] MCP工具服务器启动 - 独立部署版本")
-    safe_print("[TOOL] " + "="*50 + " [TOOL]")
-    safe_print("")
-    safe_print(f"[WEB] 服务地址: http://127.0.0.1:{MCP_PORT}")
-    safe_print(f"[DOCS] API文档: http://127.0.0.1:{MCP_PORT}/docs")
-    safe_print(f"[CHECK] 健康检查: http://127.0.0.1:{MCP_PORT}/health")
-    safe_print(f"[TOOLS] 工具列表: http://127.0.0.1:{MCP_PORT}/tools/list")
-    safe_print("")
-    safe_print("可用工具:")
-    safe_print("  [CALC] 单位转换器: /tools/unit-converter")
-    safe_print("  [CHECK] 物理校验器: /tools/physics-validator") 
-    safe_print("  [JSON] JSON构建器: /tools/json-builder")
-    safe_print("")
-    safe_print("[TIP] 特性:")
-    safe_print("  • 独立部署，不依赖主应用")
-    safe_print("  • 支持环境变量端口配置")
-    safe_print("  • 完整的物理逻辑校验")
-    safe_print("  • 智能单位转换和标准化")
-    safe_print("")
-    safe_print("[TIP] 提示: 按 Ctrl+C 停止服务器")
-    safe_print("[TOOL] " + "="*50 + " [TOOL]")
-    safe_print("")
+    print("=" * 50)
+    print("MCP工具服务器启动")
+    print("=" * 50)
+    print()
+    print(f"服务地址: http://127.0.0.1:{MCP_PORT}")
+    print(f"API文档: http://127.0.0.1:{MCP_PORT}/docs")
+    print(f"健康检查: http://127.0.0.1:{MCP_PORT}/health")
+    print(f"工具列表: http://127.0.0.1:{MCP_PORT}/tools/list")
+    print()
+    print("可用工具:")
+    print("  单位转换器: /tools/unit-converter")
+    print("  物理校验器: /tools/physics-validator") 
+    print("  JSON构建器: /tools/json-builder")
+    print()
+    print("提示: 按 Ctrl+C 停止服务器")
+    print("=" * 50)
+    print()
     
     uvicorn.run(
         app, 

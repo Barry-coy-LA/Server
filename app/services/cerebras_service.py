@@ -55,7 +55,7 @@ class CerebrasService:
             self.config = CerebrasConfig(
                 api_key=api_key,
                 base_url=cerebras_config.get('api_url', 'https://api.cerebras.ai/v1'),
-                model=cerebras_config.get('model', 'llama3.1-8b'),
+                model=cerebras_config.get('model', 'qwen-3-32b'),
                 timeout=cerebras_config.get('timeout', 30.0),
                 max_tokens=cerebras_config.get('max_tokens', 2048),
                 temperature=cerebras_config.get('temperature', 0.1)

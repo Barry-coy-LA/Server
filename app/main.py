@@ -174,12 +174,7 @@ try:
     logger.info("✅ 工况识别模块已加载")
 except ImportError as e:
     logger.warning(f"⚠️ 无法加载工况识别模块: {e}")
-
-try:
-    from app.routers.cerebras import router as cerebras_router
-    logger.info("✅ Cerebras模块已加载")
-except ImportError as e:
-    logger.warning(f"⚠️ 无法加载Cerebras模块: {e}")
+    workload_router = None
 
 # ========== 应用初始化 ==========
 app = FastAPI(
@@ -240,9 +235,9 @@ if workload_router:
     app.include_router(workload_router, prefix="/workload", tags=["工况识别"])
     logger.info("✅ 工况识别路由已注册")
 
-if cerebras_router:
-    app.include_router(cerebras_router, prefix="/cerebras", tags=["LLM服务"])
-    logger.info("✅ Cerebras路由已注册")
+# if cerebras_router:
+#     app.include_router(cerebras_router, prefix="/cerebras", tags=["LLM服务"])
+#     logger.info("✅ Cerebras路由已注册")
 
 # ========== 网络信息接口 ==========
 @app.get("/api/network-info", summary="网络信息", tags=["监控系统"])
@@ -302,10 +297,15 @@ async def industrial_console():
                 "OCR_SERVICE": "/ocr/table" if ocr_router else "未加载",
                 "FACE_SERVICE": "/face/register" if face_router else "未加载",
                 "APPROVAL_SERVICE": "/approval/test" if approval_router else "未加载",
-                "WORKLOAD_SERVICE": "/workload/status" if workload_router else "未加载",
-                "CEREBRAS_SERVICE": "/cerebras/status" if cerebras_router else "未加载",
+                "WORKLOAD_SERVICE": "/workload/test" if workload_router else "未加载",
                 "NETWORK_INFO": "/api/network-info"
             },
+            "workload_endpoints": [  # 新增工况识别端点
+                "/workload/recognize/text - 文本工况识别",
+                "/workload/recognize/ocr - OCR工况识别", 
+                "/workload/switch-llm - 切换LLM",
+                "/workload/status - 服务状态"
+            ] if workload_router else [],
             "setup_guide": [
                 "1. 创建目录: mkdir -p app/static",
                 "2. 将工业界面HTML保存到 app/static/index.html", 
@@ -436,7 +436,6 @@ async def industrial_health_check():
             "USAGE_TRACKER": "OPERATIONAL" if usage_tracker else "NOT_LOADED",
             "APPROVAL_SYSTEM": "OPERATIONAL" if approval_router else "NOT_LOADED",
             "WORKLOAD_RECOGNITION": "OPERATIONAL" if workload_router else "NOT_LOADED",
-            "CEREBRAS_LLM": "OPERATIONAL" if cerebras_router else "NOT_LOADED",
             "MONITORING_SYSTEM": "OPERATIONAL"
         }
         
@@ -567,7 +566,7 @@ async def startup_industrial_system():
                 from app.services.workload_recognition_service import get_workload_service
                 workload_service = get_workload_service()
                 status = workload_service.get_service_status()
-                logger.info(f"[STARTUP] ✅ 工况识别系统已启动，支持 {status['total_llm_count']} 个LLM")
+                logger.info(f"[STARTUP] ✅ 工况识别系统已启动，支持 {status['current_llm']}")
             except Exception as e:
                 logger.warning(f"[STARTUP] ⚠️ 工况识别系统初始化失败: {e}")
         
@@ -595,8 +594,8 @@ async def startup_industrial_system():
             loaded_modules.append("实验审批")
         if workload_router:
             loaded_modules.append("工况识别")
-        if cerebras_router:
-            loaded_modules.append("Cerebras")
+        # if cerebras_router:
+        #     loaded_modules.append("Cerebras")
         if usage_tracker:
             loaded_modules.append("使用追踪")
         
@@ -617,10 +616,11 @@ async def startup_industrial_system():
             logger.info("[ENDPOINTS] 🔒 生物识别: /face/register")
         if approval_router:
             logger.info("[ENDPOINTS] 📋 实验审批: /approval/test")
-        if workload_router:
-            logger.info("[ENDPOINTS] 🏭 工况识别: /workload/status")
-        if cerebras_router:
-            logger.info("[ENDPOINTS] 🚀 Cerebras LLM: /cerebras/status")
+        if workload_router:  # 新增
+            logger.info("[ENDPOINTS] 🏭 工况识别: /workload/test")
+            logger.info("[ENDPOINTS] 🔄 LLM切换: /workload/switch-llm")
+        # if cerebras_router:
+        #     logger.info("[ENDPOINTS] 🚀 Cerebras LLM: /cerebras/status")
         logger.info("[ENDPOINTS] 📚 系统文档: /docs")
         logger.info("[ENDPOINTS] 🔍 健康监控: /health")
         logger.info("[ENDPOINTS] 📊 系统监控: /api/system-monitor")

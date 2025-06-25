@@ -1,18 +1,22 @@
-# app/services/workload_recognition_service.py - 修复版本
+# app/services/workload_recognition_service.py
 """
-工况识别服务 - 支持多种LLM (Qwen + Cerebras)
-修复了枚举问题和缺失的TestType定义
+工况识别服务 - 基于LangChain的多LLM支持
+技术栈：Qwen3 + Cerebras + LangChain + MCP
 """
 
 import json
 import logging
 import asyncio
+import httpx
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
-import httpx
-import re
 from enum import Enum
+
+# LangChain imports
+from langchain.chains import TransformChain, SequentialChain
+from langchain.schema import BaseMessage, HumanMessage, SystemMessage
+from langchain.callbacks.base import BaseCallbackHandler
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +29,6 @@ class LLMProvider(Enum):
     """LLM提供商枚举"""
     QWEN = "qwen"
     CEREBRAS = "cerebras"
-    AUTO = "auto"  # 自动选择
 
 class WorkloadStage(BaseModel):
     """工况阶段模型"""
@@ -45,7 +48,6 @@ class WorkloadStage(BaseModel):
 class WorkloadResult(BaseModel):
     """工况识别结果"""
     test_type: TestType
-    test_name: str
     suction_pressure_tolerance: float = Field(..., description="吸气压力判稳")
     discharge_pressure_tolerance: float = Field(..., description="排气压力判稳")
     pressure_standard: str = Field(default="绝对压力", description="气压标准")
@@ -54,13 +56,222 @@ class WorkloadResult(BaseModel):
     validation_errors: List[str] = Field(default=[], description="校验错误")
     processing_info: Dict[str, Any] = Field(default={}, description="处理信息")
 
-class COTPrompts:
-    """COT提示词管理"""
+class WorkloadCallbackHandler(BaseCallbackHandler):
+    """工况识别回调处理器"""
     
-    @staticmethod
-    def test_type_classification_prompt() -> str:
-        """测试类型分类的COT提示词"""
-        return """
+    def __init__(self):
+        self.chain_logs = []
+        self.processing_time = {}
+    
+    def on_chain_start(self, serialized, inputs, **kwargs):
+        chain_name = serialized.get("name", "unknown")
+        self.processing_time[chain_name] = datetime.now()
+        logger.info(f"[LangChain] 开始执行链: {chain_name}")
+    
+    def on_chain_end(self, outputs, **kwargs):
+        for chain_name, start_time in self.processing_time.items():
+            duration = (datetime.now() - start_time).total_seconds()
+            logger.info(f"[LangChain] 链执行完成: {chain_name}, 耗时: {duration:.2f}s")
+
+class CustomLLM:
+    """自定义LLM包装器，支持多种LLM提供商"""
+    
+    def __init__(self, provider: LLMProvider, config: Dict[str, Any]):
+        self.provider = provider
+        self.config = config
+        self._init_provider()
+    
+    def _init_provider(self):
+        """初始化LLM提供商"""
+        if self.provider == LLMProvider.CEREBRAS:
+            try:
+                from app.services.cerebras_service import get_cerebras_service
+                self.service = get_cerebras_service()
+                if not self.service:
+                    raise RuntimeError("Cerebras服务未配置")
+                logger.info("✅ Cerebras LLM已初始化")
+            except Exception as e:
+                logger.error(f"❌ Cerebras初始化失败: {e}")
+                raise
+        
+        elif self.provider == LLMProvider.QWEN:
+            # Qwen通过HTTP API调用
+            if not self.config.get('api_key'):
+                raise RuntimeError("Qwen API Key未配置")
+            self.service = "qwen_http"
+            logger.info("✅ Qwen LLM已配置")
+    
+    async def ainvoke(self, messages: List[BaseMessage], **kwargs) -> str:
+        """异步调用LLM"""
+        # 将LangChain消息转换为字符串
+        if isinstance(messages, list) and len(messages) > 0:
+            prompt = messages[-1].content if hasattr(messages[-1], 'content') else str(messages[-1])
+        else:
+            prompt = str(messages)
+        
+        if self.provider == LLMProvider.CEREBRAS:
+            return await self._call_cerebras(prompt, **kwargs)
+        elif self.provider == LLMProvider.QWEN:
+            return await self._call_qwen(prompt, **kwargs)
+        else:
+            raise ValueError(f"不支持的LLM提供商: {self.provider}")
+    
+    async def _call_cerebras(self, prompt: str, **kwargs) -> str:
+        """调用Cerebras API"""
+        try:
+            max_tokens = kwargs.get('max_tokens', 2000)
+            temperature = kwargs.get('temperature', 0.1)
+            
+            response = await self.service.simple_completion(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Cerebras调用失败: {e}")
+            raise
+    
+    async def _call_qwen(self, prompt: str, **kwargs) -> str:
+        """调用Qwen API"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.config['api_key']}",
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "model": self.config.get('model', 'qwen-plus'),
+                "input": {
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                "parameters": {
+                    "temperature": kwargs.get('temperature', self.config.get('temperature', 0.1)),
+                    "max_tokens": kwargs.get('max_tokens', self.config.get('max_tokens', 3000))
+                }
+            }
+            
+            timeout = self.config.get('timeout', 60.0)
+            
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(
+                    self.config.get('api_url'), 
+                    headers=headers, 
+                    json=data
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                return result["output"]["choices"][0]["message"]["content"]
+                
+        except Exception as e:
+            logger.error(f"Qwen调用失败: {e}")
+            raise
+
+class WorkloadRecognitionService:
+    """工况识别服务 - 基于LangChain的多阶段处理"""
+    
+    def __init__(self, preferred_llm: LLMProvider = LLMProvider.QWEN):
+        self.preferred_llm = preferred_llm
+        self.mcp_url = "http://localhost:8001"  # MCP服务器地址
+        
+        # 加载配置
+        self.config = self._load_config()
+        
+        # 初始化LLM
+        self.llm = self._init_llm(preferred_llm)
+        
+        # 初始化LangChain处理链
+        self.processing_chain = self._build_processing_chain()
+        
+        # 回调处理器
+        self.callback_handler = WorkloadCallbackHandler()
+        
+        logger.info(f"工况识别服务已初始化，使用LLM: {preferred_llm.value}")
+    
+    def _load_config(self) -> Dict[str, Any]:
+        """加载配置"""
+        try:
+            from app.services.workload_config import workload_config
+            return {
+                'qwen': workload_config.get_qwen_config(),
+                'mcp': workload_config.get_mcp_config(),
+                'features': workload_config.get('features', {}),
+                'validation_rules': workload_config.get_validation_rules()
+            }
+        except ImportError:
+            logger.warning("配置文件未找到，使用默认配置")
+            return {
+                'qwen': {'api_key': 'csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54'},
+                'mcp': {'url': 'http://localhost:8001'},
+                'features': {'physics_validation': True, 'unit_conversion': True},
+                'validation_rules': {}
+            }
+    
+    def _init_llm(self, provider: LLMProvider) -> CustomLLM:
+        """初始化LLM"""
+        if provider == LLMProvider.QWEN:
+            config = self.config['qwen']
+            config.update({
+                'api_url': 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+                'model': 'qwen-plus',
+                'temperature': 0.1,
+                'max_tokens': 3000,
+                'timeout': 60.0
+            })
+        elif provider == LLMProvider.CEREBRAS:
+            config = {}
+        else:
+            raise ValueError(f"不支持的LLM提供商: {provider}")
+        
+        return CustomLLM(provider, config)
+    
+    def _build_processing_chain(self) -> SequentialChain:
+        """构建LangChain处理链"""
+        
+        # 1. 测试类型判断链
+        def test_type_classifier(inputs):
+            return {"test_type_prompt": self._build_test_type_prompt(inputs["text"])}
+        
+        test_type_chain = TransformChain(
+            input_variables=["text"],
+            output_variables=["test_type_prompt"],
+            transform=test_type_classifier
+        )
+        
+        # 2. 参数提取链
+        def parameter_extractor(inputs):
+            return {"params_prompt": self._build_params_extraction_prompt(inputs["text"])}
+        
+        params_chain = TransformChain(
+            input_variables=["text"],
+            output_variables=["params_prompt"],
+            transform=parameter_extractor
+        )
+        
+        # 3. 工作模式解析链
+        def work_mode_parser(inputs):
+            return {"stages_prompt": self._build_work_mode_prompt(inputs["text"])}
+        
+        work_mode_chain = TransformChain(
+            input_variables=["text"],
+            output_variables=["stages_prompt"],
+            transform=work_mode_parser
+        )
+        
+        # 组合成序列链
+        processing_chain = SequentialChain(
+            chains=[test_type_chain, params_chain, work_mode_chain],
+            input_variables=["text"],
+            output_variables=["test_type_prompt", "params_prompt", "stages_prompt"],
+            verbose=True
+        )
+        
+        return processing_chain
+    
+    def _build_test_type_prompt(self, text: str) -> str:
+        """构建测试类型判断提示词"""
+        return f"""
         你是一个制冷系统压缩机测试专家，需要根据测试描述判断测试类型。请按照以下思维步骤进行分析：
 
         **思维步骤:**
@@ -80,214 +291,186 @@ class COTPrompts:
 
         输出: 耐久测试
 
-        现在请分析以下测试描述:
-        {input_text}
+        {text}
 
-        请按照上述思维步骤进行分析，最后只输出测试类型(耐久测试/性能测试)。
-        """
-    @staticmethod
-    def get_total_stages_prompt() -> str:
-        """获取测试阶段总数的COT提示词"""
-        return """"
-        你是一个制冷系统压缩机测试专家，需要根据测试描述判断测试类型。请根据一下思维步骤进行分析：
-
-        **思维步骤:**
-        1. 识别测试描述中的阶段信息
-        2. 确定每个阶段的持续时间和条件
-        3. 确定测试的总阶段数
-        4. 给出判断理由
-
-        **示例:**
-        输入: "压缩机低温耐久测试，工作模式：产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃.保持120h后再以1℃/min的变化速率恢复至常温。"
-
-        思维过程:
-        **工作模式提取** 产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃.保持120h后再以1℃/min的变化速率恢复至常温。
-        1. **阶段识别**:
-        - 第一阶段: 从-20℃开始，以1℃/min的速率降温至-40℃
-        - 第二阶段: 在-40℃保持120小时
-        - 第三阶段: 从-40℃以1℃/min的速率升温至常温
-
-        输出：3
-
-        现在请分析以下测试描述:
-        {input_text}
-
-        请按照上述思维步骤进行分析，最后只输出阶段数。
+        请分析测试描述中的关键词和测试目的，只回答"耐久测试"或"性能测试"。
         """
     
-    @staticmethod
-    def parameter_extraction_prompt() -> str:
-        """参数提取的COT提示词"""
-        return """
-        你是一个工业参数提取专家，需要从测试描述中提取关键参数。请按照以下思维步骤进行分析：
+    def _build_params_extraction_prompt(self, text: str) -> str:
+        """构建参数提取提示词"""
+        return f"""
+        从以下测试描述中提取关键参数，输出标准JSON格式。
 
-        **思维步骤:**
-        1. 逐行扫描文本，识别参数名称
-        2. 提取对应的数值和单位
-        3. 识别容差和范围信息
-        4. 标准化参数格式
-        5. 输出JSON结构
+        需要提取的参数包括：
+        - 吸气压力
+        - 排气压力  
+        - 电压
+        - 过热度
+        - 过冷度
+        - 转速
+        - 环温
+        - 低温（如果有）
+        - 高温（如果有）
+        - 温度变化速率（如果有）
+        - 低温停留时间（如果有）
+        - 工作模式
 
-        **示例:**
-        输入: "压缩机低温耐久测试，吸气压力：0.1+-0.01Mpa（A），排气压力：1.0+-0.02Mpa（A），电压：650+-5V，过热度：10±1°C，过冷度：5°C，转速：800±50rmp，环温：-20℃±1°C，低温：-40°C+-1°C，高温：常温°C，温度变化速率：1°C/min，低温停留时间：7200min，工作模式：产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃.保持120h后再以1℃/min的变化速率恢复至常温。"
+        测试描述：
+        {text}
 
-        思维过程:
-        1. **参数识别**: 
-        - 吸气压力: 0.1+-0.01Mpa（A）
-        - 排气压力: 1.0+-0.02Mpa（A）
-        - 电压: 650+-5V
-        - 过热度: 10±1°C
-        - 过冷度: 5°C
-        - 转速: 800±50rmp
-        - 环温: -20℃±1°C
-        - 低温: -40°C+-1°C
-        - 温度变化速率: 1°C/min
-        - 低温停留时间: 7200min
-
-        2. **数值提取**: 0.1, 1.0, 650, 10, 5, 800, -20, -40, 1, 7200
-
-        3. **单位识别**: MPa, V, °C, rpm, min
-
-        4. **容差处理**: ±0.01, ±0.02, ±5, ±1, ±50, ±1, ±1
-
-        5. **工作模式提取**: "产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃.保持120h后再以1℃/min的变化速率恢复至常温"
-
-        输出:
+        请输出JSON格式，例如：
         {{
             "吸气压力": "0.1±0.01MPa",
             "排气压力": "1.0±0.02MPa",
             "电压": "650±5V",
-            "过热度": "10±1°C",
-            "过冷度": "5°C",
-            "转速": "800±50rpm",
-            "环温": "-20℃±1°C",
-            "低温": "-40°C±1°C",
-            "温度变化速率": "1°C/min",
-            "低温停留时间": "7200min",
-            "工作模式": "产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃.保持120h后再以1℃/min的变化速率恢复至常温。"
+            "工作模式": "具体的工作模式描述"
         }}
-
-        现在请分析以下测试描述:
-        {input_text}
-
-        请按照上述思维步骤提取参数，输出标准JSON格式。
         """
+    
+    def _build_work_mode_prompt(self, text: str) -> str:
+        """构建工作模式解析提示词"""
+        return f"""
+        分析以下测试描述中的工作模式，将其分解为具体的测试阶段。
 
-class WorkloadRecognitionService:
-    """工况识别服务 - 支持多种LLM"""
+        每个阶段需要包含：
+        - 初始温度
+        - 目标温度  
+        - 温度变化率（正数表示升温，负数表示降温，0表示保温）
+        - 持续时间(s)
+
+        **示例1:**
+        输入: "产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃，保持120h后再以1℃/min的变化速率恢复至常温。"
+        输出:
+        {{
+            "stages": [
+                {{
+                    "stage_number": 1,
+                    "initial_temp": -20,
+                    "target_temp": -40,
+                    "temp_change_rate": -1,
+                    "duration": 1200,
+                    "description": "从-20℃降温至-40℃"
+                }},
+                {{
+                    "stage_number": 2,
+                    "initial_temp": -40,
+                    "target_temp": -40,
+                    "temp_change_rate": 0,
+                    "duration": 432000,
+                    "description": "在-40℃保温120小时（7200分钟）"
+                }},
+                {{
+                    "stage_number": 3,
+                    "initial_temp": -40,
+                    "target_temp": 25,
+                    "temp_change_rate": 1,
+                    "duration": 3900,
+                    "description": "从-40℃升温至常温（假设常温为25℃）"
+                }}
+            ]
+        }}
+        **示例2:**
+        产品在环境温度75°C下开启，运行工况：吸气压力：0.1+-0.01Mpa（A），排气压力：1.0+-0.02Mpa（A），电压：650+-5V，过热度：10±1°C，过冷度：5°C，转速：11000rmp，以1°C/min逐步调节至最高温度120°C
+        输出:
+        {{
+            "stages": [
+                {{
+                    "stage_number": 1,
+                    "initial_temp": 75,
+                    "target_temp": 120,
+                    "temp_change_rate": 1,
+                    "duration": 2700,
+                    "description": "从75℃升温至120℃"
+                }}
+            ]
+        }}
+        测试描述：
+        {text}
+
+        请输出JSON格式的阶段列表，例如：
+        {{
+            "stages": [
+                {{
+                    "stage_number": 1,
+                    "initial_temp": -20,
+                    "target_temp": -40,
+                    "temp_change_rate": -1,
+                    "duration": 1200,
+                    "description": "降温阶段"
+                }},
+                {{
+                    "stage_number": 2, 
+                    "initial_temp": -40,
+                    "target_temp": -40,
+                    "temp_change_rate": 0,
+                    "duration": 432000,
+                    "description": "保温阶段"
+                }}
+            ]
+        }}
+        """
     
-    def __init__(self, preferred_llm: LLMProvider = LLMProvider.AUTO):
-        self.preferred_llm = preferred_llm
-        self.prompts = COTPrompts()
-        
-        # 加载配置
-        try:
-            from .workload_config import workload_config
-            self.config = workload_config
-            self.qwen_config = self.config.get_qwen_config()
-        except ImportError:
-            logger.warning("工况配置未加载，使用默认配置")
-            self.config = None
-            self.qwen_config = {
-                "api_key": "csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54",
-                "api_url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-                "model": "qwen-plus",
-                "temperature": 0.1,
-                "max_tokens": 3000,
-                "timeout": 60.0
-            }
-        
-        # 初始化LLM服务
-        self._init_llm_services()
-        
-        logger.info(f"工况识别服务已初始化，首选LLM: {preferred_llm.value}")
+    async def switch_llm(self, new_provider: LLMProvider):
+        """切换LLM提供商"""
+        logger.info(f"切换LLM: {self.preferred_llm.value} -> {new_provider.value}")
+        self.preferred_llm = new_provider
+        self.llm = self._init_llm(new_provider)
+        logger.info(f"✅ LLM切换完成: {new_provider.value}")
     
-    def _init_llm_services(self):
-        """初始化LLM服务"""
-        self.llm_services = {}
-        
-        # 初始化Cerebras服务
-        try:
-            from .cerebras_service import get_cerebras_service
-            cerebras_service = get_cerebras_service()
-            if cerebras_service:
-                self.llm_services[LLMProvider.CEREBRAS] = cerebras_service
-                logger.info("✅ Cerebras LLM服务已加载")
-        except Exception as e:
-            logger.warning(f"⚠️ Cerebras LLM服务加载失败: {e}")
-        
-        # Qwen通过HTTP API调用，不需要单独的服务实例
-        if self.qwen_config.get('api_key'):
-            self.llm_services[LLMProvider.QWEN] = "configured"
-            logger.info("✅ Qwen LLM服务已配置")
-    
-    def _select_llm(self) -> LLMProvider:
-        """选择最佳的LLM"""
-        if self.preferred_llm != LLMProvider.AUTO:
-            if self.preferred_llm in self.llm_services:
-                return self.preferred_llm
-        
-        # 自动选择：优先Cerebras（速度快），然后Qwen（功能全）
-        if LLMProvider.CEREBRAS in self.llm_services:
-            return LLMProvider.CEREBRAS
-        elif LLMProvider.QWEN in self.llm_services:
-            return LLMProvider.QWEN
-        else:
-            raise RuntimeError("没有可用的LLM服务")
-    
-    async def recognize_from_text(self, input_text: str, language: str = "zh", 
-                                llm_provider: Optional[LLMProvider] = None) -> WorkloadResult:
-        """从文本识别工况"""
-        logger.info(f"开始工况识别，输入长度: {len(input_text)}")
-        
-        # 选择LLM
-        selected_llm = llm_provider or self._select_llm()
+    async def recognize_from_text(self, input_text: str, language: str = "zh") -> WorkloadResult:
+        """从文本识别工况 - 使用LangChain多阶段处理"""
+        logger.info(f"开始工况识别，输入长度: {len(input_text)}, LLM: {self.preferred_llm.value}")
         start_time = datetime.now()
         
         try:
             # 第一步：判断测试类型
-            test_type = await self._determine_test_type_with_llm(input_text, selected_llm)
-            logger.info(f"识别测试类型: {test_type}, 使用LLM: {selected_llm.value}")
+            test_type_prompt = self._build_test_type_prompt(input_text)
+            test_type_response = await self.llm.ainvoke([HumanMessage(content=test_type_prompt)])
+            test_type = self._parse_test_type(test_type_response)
+            logger.info(f"✅ 测试类型: {test_type.value}")
             
-            # 第二步：识别阶段数
-            total_stages = await self._determine_test_stages_with_llm(input_text, selected_llm)
-            logger.info(f"识别阶段数: {total_stages} 个")
-
-            # 第三步：提取关键参数
-            extracted_params = await self._extract_parameters_with_llm(input_text, selected_llm)
-            logger.info(f"提取参数: {len(extracted_params)} 个")
+            # 第二步：提取参数
+            params_prompt = self._build_params_extraction_prompt(input_text)
+            params_response = await self.llm.ainvoke([HumanMessage(content=params_prompt)])
+            extracted_params = self._parse_json_response(params_response)
+            logger.info(f"✅ 提取参数: {len(extracted_params)} 个")
             
-            # 第四步：单位转换和校验
-            if self.config and self.config.is_feature_enabled('unit_conversion'):
-                standardized_params = await self._standardize_and_validate(extracted_params)
-            else:
-                standardized_params = await self._standardize_and_validate(extracted_params)
+            # 第三步：解析工作模式生成阶段
+            stages_prompt = self._build_work_mode_prompt(input_text)
+            stages_response = await self.llm.ainvoke([HumanMessage(content=stages_prompt)])
+            print(stages_response)
+            stages_data = self._parse_json_response(stages_response)
+            logger.info(f"✅ 解析阶段: {len(stages_data.get('stages', []))} 个")
             
-            # 第五步：生成阶段
-            stages = await self._generate_stages(standardized_params, total_stages)
-            logger.info(f"生成阶段: {len(stages)} 个")
+            # 第四步：调用MCP进行单位转换和校验
+            standardized_params = await self._call_mcp_unit_converter(extracted_params)
+            validation_result = await self._call_mcp_physics_validator(standardized_params)
+            
+            # 第五步：构建最终阶段
+            stages = self._build_workload_stages(stages_data.get('stages', []), standardized_params)
             
             # 第六步：构建最终结果
             processing_time = (datetime.now() - start_time).total_seconds()
-            result = await self._build_final_result(test_type, standardized_params, stages, {
-                "llm_used": selected_llm.value,
-                "processing_time": processing_time,
-                "language": language
-            })
+            result = self._build_final_result(
+                test_type, 
+                standardized_params, 
+                stages, 
+                validation_result, 
+                {
+                    "llm_used": self.preferred_llm.value,
+                    "processing_time": processing_time,
+                    "language": language
+                }
+            )
             
-            logger.info(f"工况识别完成，耗时: {processing_time:.2f}s")
+            logger.info(f"✅ 工况识别完成，耗时: {processing_time:.2f}s")
             return result
             
         except Exception as e:
-            logger.error(f"工况识别失败: {e}")
-            # 尝试降级到其他LLM
-            if selected_llm != LLMProvider.QWEN and LLMProvider.QWEN in self.llm_services:
-                logger.info("尝试使用Qwen作为备选LLM")
-                return await self.recognize_from_text(input_text, language, LLMProvider.QWEN)
+            logger.error(f"❌ 工况识别失败: {e}")
             raise
     
-    async def recognize_from_ocr(self, ocr_params: Dict[str, str], language: str = "zh",
-                               llm_provider: Optional[LLMProvider] = None) -> WorkloadResult:
+    async def recognize_from_ocr(self, ocr_params: Dict[str, str], language: str = "zh") -> WorkloadResult:
         """从OCR结果识别工况"""
         logger.info(f"从OCR结果识别工况，参数: {len(ocr_params)} 个")
         
@@ -295,346 +478,127 @@ class WorkloadRecognitionService:
         text_description = self._ocr_params_to_text(ocr_params)
         logger.info(f"转换为文本描述: {text_description[:200]}...")
         
-        return await self.recognize_from_text(text_description, language, llm_provider)
+        return await self.recognize_from_text(text_description, language)
     
-    async def _determine_test_type_with_llm(self, input_text: str, llm_provider: LLMProvider) -> TestType:
-        """使用指定LLM判断测试类型"""
-        prompt = self.prompts.test_type_classification_prompt().format(input_text=input_text)
-        
-        try:
-            if llm_provider == LLMProvider.CEREBRAS:
-                response = await self._call_cerebras_api(prompt, max_tokens=300)
-            else:
-                response = await self._call_qwen_api(prompt)
-            
-            response_text = response.strip()
-
-            # 提取关键词
-            if "性能测试" in response_text:
-                return TestType.PERFORMANCE
-            elif "耐久测试" in response_text:
+    def _parse_test_type(self, response: str) -> TestType:
+        """解析测试类型"""
+        response = response.strip()
+        if "耐久测试" in response:
+            return TestType.ENDURANCE
+        elif "性能测试" in response:
+            return TestType.PERFORMANCE
+        else:
+            # 默认判断
+            if any(keyword in response.lower() for keyword in ["耐久", "寿命", "长期", "循环"]):
                 return TestType.ENDURANCE
             else:
-                logger.warning(f"无法识别测试类型: {response_text}")
-                return TestType.UNKNOWN
-            
-        except Exception as e:
-            logger.error(f"LLM测试类型判断失败: {e}")
-            return self._determine_test_type_simple(input_text)
-        
-
-    async def _determine_test_stages_with_llm(self, input_text: str, llm_provider: LLMProvider) -> int:
-        """使用指定LLM判断测试阶段数"""
-        prompt = self.prompts.get_total_stages_prompt().format(input_text=input_text)
-
-        try:
-            if llm_provider == LLMProvider.CEREBRAS:
-                response = await self._call_cerebras_api(prompt, max_tokens=300)
-            else:
-                response = await self._call_qwen_api(prompt)
-            response_text = response.strip()
-
-            # ✅ 优先匹配“输出：3”或“输出: 3”
-            match = re.search(r"输出[:：]?\s*(\d+)", response_text)
-            if match:
-                stage_count = int(match.group(1))
-                logger.info(f"识别阶段数（输出匹配）: {stage_count} 个")
-                return stage_count
-
-            # ⚠️ 没有“输出”时，尽量不要盲目取最后一个数字（容易误判）
-            # 可以考虑再看是否出现“共 N 阶段”等更可靠模式；此处谨慎处理：
-            logger.warning(f"未匹配到“输出：”，放弃提取阶段数：{response_text}")
-            return 1
-
-        except Exception as e:
-            logger.error(f"LLM阶段数判断失败: {e}")
-            return 1
-
+                return TestType.PERFORMANCE
     
-    async def _extract_parameters_with_llm(self, input_text: str, llm_provider: LLMProvider) -> Dict[str, Any]:
-        """使用指定LLM提取参数"""
-        prompt = self.prompts.parameter_extraction_prompt().format(input_text=input_text)
-        
+    def _parse_json_response(self, response: str) -> Dict[str, Any]:
+        """解析JSON响应"""
         try:
-            if llm_provider == LLMProvider.CEREBRAS:
-                response = await self._call_cerebras_api(prompt, max_tokens=1000)
-            else:  # Qwen
-                response = await self._call_qwen_api(prompt)
-            
-            # 解析JSON响应
-            try:
-                return json.loads(response)
-            except json.JSONDecodeError:
-                # 尝试提取JSON部分
-                import re
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
+            # 直接解析JSON
+            return json.loads(response)
+        except json.JSONDecodeError:
+            # 尝试提取JSON部分
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                try:
                     return json.loads(json_match.group())
-                else:
-                    logger.warning("LLM响应不是有效JSON，使用简单提取")
-                    return self._extract_parameters_simple(input_text)
-                    
-        except Exception as e:
-            logger.error(f"LLM参数提取失败: {e}")
-            return self._extract_parameters_simple(input_text)
-    
-    async def _call_cerebras_api(self, prompt: str, max_tokens: int = 2000) -> str:
-        """调用Cerebras API"""
-        cerebras_service = self.llm_services.get(LLMProvider.CEREBRAS)
-        if not cerebras_service:
-            raise RuntimeError("Cerebras服务不可用")
-        
-        try:
-            response_text = await cerebras_service.simple_completion(
-                prompt=prompt,
-                max_tokens=max_tokens,
-                temperature=0.1
-            )
-            return response_text
+                except json.JSONDecodeError:
+                    pass
             
-        except Exception as e:
-            logger.error(f"Cerebras API调用失败: {e}")
-            raise
+            # 解析失败，返回空字典
+            logger.warning(f"JSON解析失败: {response[:200]}...")
+            return {}
     
-    async def _call_qwen_api(self, prompt: str) -> str:
-        """调用Qwen API"""
-        if not self.qwen_config.get('api_key'):
-            raise RuntimeError("Qwen API Key未配置")
-        
-        headers = {
-            "Authorization": f"Bearer {self.qwen_config['api_key']}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": self.qwen_config.get('model', 'qwen-plus'),
-            "input": {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            },
-            "parameters": {
-                "temperature": self.qwen_config.get('temperature', 0.1),
-                "max_tokens": self.qwen_config.get('max_tokens', 3000)
-            }
-        }
-        
-        timeout = self.qwen_config.get('timeout', 60.0)
-        
+    async def _call_mcp_unit_converter(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """调用MCP单位转换服务"""
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    self.qwen_config.get('api_url'), 
-                    headers=headers, 
-                    json=data
+                    f"{self.mcp_url}/tools/unit-converter",
+                    json={"parameters": params}
                 )
-                response.raise_for_status()
-                result = response.json()
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success"):
+                        return result.get("result", params)
                 
-                return result["output"]["choices"][0]["message"]["content"]
-                
-        except Exception as e:
-            logger.error(f"Qwen API调用失败: {e}")
-            raise
-    
-    def _determine_test_type_simple(self, input_text: str) -> TestType:
-        """简单的测试类型判断（降级方案）"""
-        text_lower = input_text.lower()
-        
-        if any(keyword in text_lower for keyword in ["耐久", "寿命", "长期", "循环"]):
-            return TestType.ENDURANCE
-        elif any(keyword in text_lower for keyword in ["性能", "效率", "功率"]):
-            return TestType.PERFORMANCE
-        elif any(keyword in text_lower for keyword in ["热工", "温度", "热循环"]):
-            return TestType.THERMAL
-        elif any(keyword in text_lower for keyword in ["压力", "耐压", "密封"]):
-            return TestType.PRESSURE
-        elif any(keyword in text_lower for keyword in ["振动", "冲击", "震动"]):
-            return TestType.VIBRATION
-        else:
-            return TestType.UNKNOWN
-    
-    def _extract_parameters_simple(self, input_text: str) -> Dict[str, str]:
-        """简单的参数提取（降级方案）"""
-        import re
-        
-        params = {}
-        lines = input_text.split('\n')
-        
-        for line in lines:
-            line = line.strip()
-            if ':' in line or '：' in line:
-                # 统一冒号格式
-                line = line.replace('：', ':')
-                
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    if key and value:
-                        # 清理一些常见的OCR错误
-                        value = value.replace('土', '±')
-                        params[key] = value
-        
-        return params
-    
-    async def _standardize_and_validate(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """调用MCP服务进行单位转换和校验"""
-        try:
-            # 尝试调用MCP服务
-            if self.config:
-                mcp_config = self.config.get_mcp_config()
-                mcp_url = mcp_config.get('url', 'http://localhost:8001')
-                timeout = mcp_config.get('timeout', 30.0)
-                
-                # 调用MCP单位转换服务
-                async with httpx.AsyncClient(timeout=timeout) as client:
-                    response = await client.post(
-                        f"{mcp_url}/tools/unit-converter",
-                        json={"parameters": params}
-                    )
-                    if response.status_code == 200:
-                        standardized = response.json().get('result', params)
-                    else:
-                        logger.warning(f"MCP单位转换失败: {response.status_code}")
-                        standardized = params
-                
-                # 调用MCP物理校验服务
-                if self.config.is_feature_enabled('physics_validation'):
-                    async with httpx.AsyncClient(timeout=timeout) as client:
-                        response = await client.post(
-                            f"{mcp_url}/tools/physics-validator",
-                            json={"parameters": standardized}
-                        )
-                        if response.status_code == 200:
-                            validation_result = response.json().get('result', {})
-                            standardized["validation_result"] = validation_result
-                        else:
-                            logger.warning(f"MCP物理校验失败: {response.status_code}")
-                
-                return standardized
-            else:
-                # 没有配置，使用本地简单转换
-                return self._simple_standardization(params)
+                logger.warning(f"MCP单位转换失败: {response.status_code}")
+                return params
                 
         except Exception as e:
-            logger.error(f"MCP服务调用失败: {e}")
-            # 降级处理：使用本地简单转换
-            return self._simple_standardization(params)
+            logger.error(f"MCP单位转换调用失败: {e}")
+            return params
     
-    async def _generate_stages(self, params: Dict[str, Any], total_stages: int = None) -> List[WorkloadStage]:
-        """根据工作模式生成测试阶段，支持传入期望阶段数total_stages"""
-        work_mode = params.get("工作模式", "")
-        if not work_mode:
-            return []
-        
+    async def _call_mcp_physics_validator(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """调用MCP物理校验服务"""
         try:
-            # 解析工作模式中的关键信息，返回一个阶段列表（字典形式）
-            stages_data = self._parse_work_mode(work_mode)
-            
-            # 如果total_stages传入且合法，调整stages_data长度
-            if total_stages and total_stages > 0:
-                if total_stages < len(stages_data):
-                    # 截断
-                    stages_data = stages_data[:total_stages]
-                elif total_stages > len(stages_data):
-                    # 如果total_stages多于解析出来的阶段数，可以选择复制最后一个阶段补足数量，或其他逻辑
-                    last_stage = stages_data[-1] if stages_data else {}
-                    while len(stages_data) < total_stages:
-                        stages_data.append(last_stage.copy())
-            
-            # 基础参数
-            base_params = {
-                "suction_pressure": self._parse_pressure(params.get("吸气压力", "0.1MPa")),
-                "discharge_pressure": self._parse_pressure(params.get("排气压力", "1.0MPa")),
-                "voltage": params.get("电压", "650±5V"),
-                "superheat": params.get("过热度", "10±1°C"),
-                "subcooling": params.get("过冷度", "5°C"),
-                "speed": params.get("转速", "800±50rpm"),
-                "ambient_temp": params.get("环温", "-20°C±1°C")
-            }
-            
-            stages = []
-            for i, stage_info in enumerate(stages_data):
-                stage = WorkloadStage(
-                    stage_number=i + 1,
-                    initial_temp=float(stage_info.get("初始温度", 20)),
-                    target_temp=float(stage_info.get("目标温度", 20)),
-                    temp_change_rate=float(stage_info.get("温度变化率", 0)),
-                    duration=float(stage_info.get("持续时间", 3600)),
-                    **base_params
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.mcp_url}/tools/physics-validator",
+                    json={"parameters": params}
                 )
-                stages.append(stage)
-            
-            return stages
-        
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success"):
+                        return result.get("result", {})
+                
+                logger.warning(f"MCP物理校验失败: {response.status_code}")
+                return {"valid": True, "errors": [], "warnings": []}
+                
         except Exception as e:
-            logger.error(f"阶段生成失败: {e}")
-            return []
-
+            logger.error(f"MCP物理校验调用失败: {e}")
+            return {"valid": True, "errors": [], "warnings": []}
     
-    def _parse_work_mode(self, work_mode: str) -> List[Dict[str, Any]]:
-        """解析工作模式描述"""
+    def _build_workload_stages(self, stages_data: List[Dict[str, Any]], 
+                             base_params: Dict[str, Any]) -> List[WorkloadStage]:
+        """构建工况阶段"""
         stages = []
         
-        # 示例：解析典型的低温耐久测试模式
-        if "保持" in work_mode and "h" in work_mode:
-            # 三阶段模式：降温 -> 保温 -> 升温
-            stages = [
-                {
-                    "初始温度": -20,
-                    "目标温度": -40,
-                    "温度变化率": -1,
-                    "持续时间": 1200  # 20分钟
-                },
-                {
-                    "初始温度": -40,
-                    "目标温度": -40,
-                    "温度变化率": 0,
-                    "持续时间": 432000  # 120小时
-                },
-                {
-                    "初始温度": -40,
-                    "目标温度": 20,
-                    "温度变化率": 1,
-                    "持续时间": 3600  # 60分钟
-                }
-            ]
-        else:
-            # 默认单阶段
-            stages = [
-                {
-                    "初始温度": 20,
-                    "目标温度": 20,
-                    "温度变化率": 0,
-                    "持续时间": 3600
-                }
-            ]
+        # 从基础参数中提取固定值
+        fixed_params = {
+            "suction_pressure": self._parse_pressure(base_params.get("吸气压力", "0.1MPa")),
+            "discharge_pressure": self._parse_pressure(base_params.get("排气压力", "1.0MPa")),
+            "voltage": base_params.get("电压", "650±5V"),
+            "superheat": base_params.get("过热度", "10±1°C"),
+            "subcooling": base_params.get("过冷度", "5°C"),
+            "speed": base_params.get("转速", "800±50rpm"),
+            "ambient_temp": base_params.get("环温", "-20°C±1°C")
+        }
+        
+        for stage_data in stages_data:
+            stage = WorkloadStage(
+                stage_number=stage_data.get("stage_number", len(stages) + 1),
+                initial_temp=float(stage_data.get("initial_temp", 20)),
+                target_temp=float(stage_data.get("target_temp", 20)),
+                temp_change_rate=float(stage_data.get("temp_change_rate", 0)),
+                duration=float(stage_data.get("duration", 3600)),
+                **fixed_params
+            )
+            stages.append(stage)
         
         return stages
     
-    async def _build_final_result(self, test_type: TestType, params: Dict[str, Any], 
-                                stages: List[WorkloadStage], processing_info: Dict[str, Any]) -> WorkloadResult:
+    def _build_final_result(self, test_type: TestType, params: Dict[str, Any], 
+                          stages: List[WorkloadStage], validation_result: Dict[str, Any],
+                          processing_info: Dict[str, Any]) -> WorkloadResult:
         """构建最终结果"""
-        # 获取测试类型的配置
-        if self.config:
-            type_config = self.config.get_test_type_config(test_type.value)
-            tolerances = type_config.get("tolerances", {"suction": 0.01, "discharge": 0.02})
-        else:
+        # 根据测试类型设置容差
+        if test_type == TestType.ENDURANCE:
             tolerances = {"suction": 0.01, "discharge": 0.02}
+        else:  # PERFORMANCE
+            tolerances = {"suction": 0.005, "discharge": 0.01}
         
         return WorkloadResult(
             test_type=test_type,
-            test_name=f"{test_type.value}",
             suction_pressure_tolerance=tolerances["suction"],
             discharge_pressure_tolerance=tolerances["discharge"],
             total_stages=len(stages),
             stages=stages,
-            validation_errors=params.get("validation_result", {}).get("errors", []),
+            validation_errors=validation_result.get("errors", []),
             processing_info=processing_info
         )
     
@@ -648,109 +612,40 @@ class WorkloadRecognitionService:
     def _parse_pressure(self, pressure_str: str) -> float:
         """解析压力值"""
         import re
-        match = re.search(r'([\d.]+)', pressure_str)
+        match = re.search(r'([\d.]+)', str(pressure_str))
         return float(match.group(1)) if match else 0.0
-    
-    def _simple_standardization(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """简单的单位标准化（降级处理）"""
-        standardized = params.copy()
-        
-        # 简单的单位转换逻辑
-        for key, value in params.items():
-            if isinstance(value, str):
-                if "MPa" in value:
-                    # 保持MPa单位
-                    pass
-                elif "kPa" in value:
-                    # 转换为MPa
-                    import re
-                    match = re.search(r'([\d.]+)', value)
-                    if match:
-                        kpa_value = float(match.group(1))
-                        mpa_value = kpa_value / 1000
-                        standardized[key] = f"{mpa_value}MPa"
-        
-        # 添加简单的验证结果
-        standardized["validation_result"] = {
-            "valid": True,
-            "errors": [],
-            "warnings": []
-        }
-        
-        return standardized
-    
-    async def compare_llm_performance(self, test_text: str) -> Dict[str, Any]:
-        """比较不同LLM的性能"""
-        results = {}
-        
-        for llm_provider in self.llm_services.keys():
-            if llm_provider == "configured":  # Skip Qwen string marker
-                continue
-                
-            try:
-                start_time = datetime.now()
-                
-                # 只测试类型判断，因为这个任务较简单
-                test_type = await self._determine_test_type_with_llm(test_text, llm_provider)
-                
-                end_time = datetime.now()
-                response_time = (end_time - start_time).total_seconds()
-                
-                results[llm_provider.value] = {
-                    "status": "success",
-                    "response_time": response_time,
-                    "result": test_type.value,
-                    "speed_rating": "fast" if response_time < 2.0 else "normal"
-                }
-                
-            except Exception as e:
-                results[llm_provider.value] = {
-                    "status": "error",
-                    "error": str(e),
-                    "response_time": 0
-                }
-        
-        return results
     
     def get_service_status(self) -> Dict[str, Any]:
         """获取服务状态"""
-        available_llms = []
-        for provider, service in self.llm_services.items():
-            if provider == LLMProvider.CEREBRAS:
-                available_llms.append({
-                    "provider": provider.value,
-                    "name": "Cerebras (Ultra-fast)",
-                    "status": "available",
-                    "features": ["高速推理", "低延迟"]
-                })
-            elif provider == LLMProvider.QWEN and service == "configured":
-                available_llms.append({
-                    "provider": provider.value,
-                    "name": "Qwen (Full-featured)",
-                    "status": "configured", 
-                    "features": ["完整功能", "中文优化", "COT推理"]
-                })
-        
         return {
             "service": "工况识别服务",
             "version": "2.1.0",
-            "preferred_llm": self.preferred_llm.value,
-            "available_llms": available_llms,
-            "total_llm_count": len(available_llms),
+            "current_llm": self.preferred_llm.value,
+            "mcp_server": self.mcp_url,
             "features": {
+                "langchain_integration": True,
                 "multi_llm_support": True,
-                "auto_fallback": True,
-                "performance_comparison": True,
-                "cot_prompts": True
-            }
+                "mcp_validation": True,
+                "ocr_integration": True
+            },
+            "supported_test_types": [t.value for t in TestType],
+            "status": "operational"
         }
 
-# 创建全局服务实例
-workload_service = None
+# 全局服务实例
+_workload_service = None
 
-def get_workload_service(preferred_llm: LLMProvider = LLMProvider.AUTO) -> WorkloadRecognitionService:
+def get_workload_service(preferred_llm: LLMProvider = LLMProvider.QWEN) -> WorkloadRecognitionService:
     """获取工况识别服务实例"""
-    global workload_service
-    if workload_service is None:
-        workload_service = WorkloadRecognitionService(preferred_llm)
-    return workload_service
+    global _workload_service
+    if _workload_service is None:
+        _workload_service = WorkloadRecognitionService(preferred_llm)
+    return _workload_service
+
+def switch_global_llm(new_provider: LLMProvider):
+    """切换全局LLM提供商"""
+    global _workload_service
+    if _workload_service:
+        asyncio.create_task(_workload_service.switch_llm(new_provider))
+    else:
+        _workload_service = WorkloadRecognitionService(new_provider)

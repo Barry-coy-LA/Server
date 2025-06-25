@@ -28,7 +28,7 @@ class WorkloadConfig:
             "cerebras_api": {
                 "api_key": "csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54",
                 "api_url": "https://api.cerebras.ai/v1",
-                "model": "llama-3.3-70b",
+                "model": "qwen-3-32b",
                 "temperature": 0.1,
                 "max_tokens": 2000,
                 "timeout": 30.0
