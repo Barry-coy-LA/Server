@@ -30,29 +30,75 @@ class LLMProvider(Enum):
     QWEN = "qwen"
     CEREBRAS = "cerebras"
 
-class WorkloadStage(BaseModel):
-    """工况阶段模型"""
-    stage_number: int = Field(..., description="阶段序号")
+class Phase(BaseModel):
+    """阶段模型 - 按照新规范定义"""
     suction_pressure: float = Field(..., description="吸气压力(MPa)")
     discharge_pressure: float = Field(..., description="排气压力(MPa)")
-    voltage: str = Field(..., description="电压")
-    superheat: str = Field(..., description="过热度")
-    subcooling: str = Field(..., description="过冷度")
-    speed: str = Field(..., description="转速")
-    ambient_temp: str = Field(..., description="环境温度")
-    initial_temp: float = Field(..., description="初始温度(°C)")
+    voltage: float = Field(..., description="电压(V)")
+    superheat: float = Field(..., description="过热度")
+    subcooling: float = Field(..., description="过冷度")
+    initial_speed: float = Field(..., description="初始转速(rpm)")
+    target_speed: float = Field(..., description="目标转速(rpm)")
+    speed_duration: float = Field(..., description="转速持续时间(s)")
+    initial_temp: float = Field(..., description="起始温度(°C)")
     target_temp: float = Field(..., description="目标温度(°C)")
-    temp_change_rate: float = Field(..., description="温度变化率(°C/min)")
-    duration: float = Field(..., description="持续时间(秒)")
+    temp_change_rate: float = Field(..., description="温度变化率(°C/s)")
+    temp_duration: float = Field(..., description="温度持续时间(s)")
+
+from typing import Dict, List, Any, Optional, Union, ForwardRef
+from datetime import datetime
+from pydantic import BaseModel, Field
+from enum import Enum
+
+
+class FlowNode(BaseModel):
+    """流程节点基类"""
+    type: str = Field(..., description="节点类型: phase/sequence/loop")
+    
+    class Config:
+        # 确保子类能正确序列化
+        validate_assignment = True
+        arbitrary_types_allowed = True
+
+class PhaseNode(FlowNode):
+    """阶段引用节点"""
+    type: str = Field(default="phase", description="节点类型")
+    phase_id: str = Field(..., description="阶段ID")
+
+class SequenceNode(FlowNode):
+    """顺序执行节点"""
+    type: str = Field(default="sequence", description="节点类型")
+    children: List[FlowNode] = Field(default_factory=list, description="子节点列表")
+
+class LoopNode(FlowNode):
+    """循环执行节点"""
+    type: str = Field(default="loop", description="节点类型")
+    count: int = Field(..., description="循环次数")
+    children: List[FlowNode] = Field(default_factory=list, description="子节点列表")
+
+try:
+    # Pydantic v2
+    SequenceNode.model_rebuild()
+    LoopNode.model_rebuild()
+except AttributeError:
+    try:
+        # Pydantic v1
+        SequenceNode.update_forward_refs()
+        LoopNode.update_forward_refs()
+    except AttributeError:
+        # 如果都不支持，则跳过（某些情况下仍能正常工作）
+        pass
 
 class WorkloadResult(BaseModel):
-    """工况识别结果"""
-    test_type: TestType
-    suction_pressure_tolerance: float = Field(..., description="吸气压力判稳")
-    discharge_pressure_tolerance: float = Field(..., description="排气压力判稳")
-    pressure_standard: str = Field(default="绝对压力", description="气压标准")
-    total_stages: int = Field(..., description="阶段总数")
-    stages: List[WorkloadStage] = Field(..., description="各阶段详情")
+    """工况识别结果 - 新JSON结构"""
+    test_type: str = Field(..., description="测试类型")
+    suction_pressure_tolerance: float = Field(..., description="吸气标准差")
+    discharge_pressure_tolerance: float = Field(..., description="排气标准差")
+    ambient_temp: float = Field(default=20.0, description="环境温度")
+    pressure_standard: str = Field(default="绝对气压", description="气压类型")
+    total_phases: int = Field(..., description="分解出来的阶段总数")
+    phases: Dict[str, Phase] = Field(..., description="阶段定义")
+    flow: Dict[str, Any] = Field(..., description="执行流程（已序列化）")  # 改为Dict类型
     validation_errors: List[str] = Field(default=[], description="校验错误")
     processing_info: Dict[str, Any] = Field(default={}, description="处理信息")
 
@@ -119,7 +165,7 @@ class CustomLLM:
     async def _call_cerebras(self, prompt: str, **kwargs) -> str:
         """调用Cerebras API"""
         try:
-            max_tokens = kwargs.get('max_tokens', 2000)
+            max_tokens = kwargs.get('max_tokens', 3000)
             temperature = kwargs.get('temperature', 0.1)
             
             response = await self.service.simple_completion(
@@ -195,6 +241,7 @@ class WorkloadRecognitionService:
             from app.services.workload_config import workload_config
             return {
                 'qwen': workload_config.get_qwen_config(),
+                'cerebras': workload_config.get_cerebras_config(),
                 'mcp': workload_config.get_mcp_config(),
                 'features': workload_config.get('features', {}),
                 'validation_rules': workload_config.get_validation_rules()
@@ -202,7 +249,15 @@ class WorkloadRecognitionService:
         except ImportError:
             logger.warning("配置文件未找到，使用默认配置")
             return {
-                'qwen': {'api_key': 'csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54'},
+                'qwen': {
+                    'api_key': 'csk-jcwvt9ejntw6xm4hj2k5jkrnytnwpedtf23j5v6kv2ytxx54',
+                    'api_url': 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+                    'model': 'qwen-plus',
+                    'temperature': 0.1,
+                    'max_tokens': 3000,
+                    'timeout': 60.0
+                },
+                'cerebras': {'enabled': False},
                 'mcp': {'url': 'http://localhost:8001'},
                 'features': {'physics_validation': True, 'unit_conversion': True},
                 'validation_rules': {}
@@ -220,7 +275,7 @@ class WorkloadRecognitionService:
                 'timeout': 60.0
             })
         elif provider == LLMProvider.CEREBRAS:
-            config = {}
+            config = self.config.get('cerebras', {})
         else:
             raise ValueError(f"不支持的LLM提供商: {provider}")
         
@@ -230,40 +285,75 @@ class WorkloadRecognitionService:
         """构建LangChain处理链"""
         
         # 1. 测试类型判断链
-        def test_type_classifier(inputs):
-            return {"test_type_prompt": self._build_test_type_prompt(inputs["text"])}
+        async def test_type_classifier(inputs):
+            prompt = self._build_test_type_prompt(inputs["text"])
+            if self.llm:
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                test_type = self._parse_test_type(response)
+            else:
+                test_type = "耐久测试"  # 默认值
+            return {"test_type": test_type}
         
         test_type_chain = TransformChain(
             input_variables=["text"],
-            output_variables=["test_type_prompt"],
+            output_variables=["test_type"],
             transform=test_type_classifier
         )
         
         # 2. 参数提取链
-        def parameter_extractor(inputs):
-            return {"params_prompt": self._build_params_extraction_prompt(inputs["text"])}
+        async def parameter_extractor(inputs):
+            prompt = self._build_params_extraction_prompt(inputs["text"])
+            if self.llm:
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                params = self._parse_json_response(response)
+            else:
+                params = {}
+            return {"extracted_params": params}
         
         params_chain = TransformChain(
             input_variables=["text"],
-            output_variables=["params_prompt"],
+            output_variables=["extracted_params"],
             transform=parameter_extractor
         )
         
-        # 3. 工作模式解析链
-        def work_mode_parser(inputs):
-            return {"stages_prompt": self._build_work_mode_prompt(inputs["text"])}
+        # 3. 阶段分解链
+        async def phase_analyzer(inputs):
+            prompt = self._build_phases_analysis_prompt(inputs["text"], inputs["test_type"])
+            if self.llm:
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                phases_data = self._parse_json_response(response)
+            else:
+                phases_data = {"phases": {}}
+            return {"phases_data": phases_data}
         
-        work_mode_chain = TransformChain(
-            input_variables=["text"],
-            output_variables=["stages_prompt"],
-            transform=work_mode_parser
+        phases_chain = TransformChain(
+            input_variables=["text", "test_type"],
+            output_variables=["phases_data"],
+            transform=phase_analyzer
         )
         
-        # 组合成序列链
+        # 4. 流程构建链
+        async def flow_builder(inputs):
+            phases_json = json.dumps(inputs["phases_data"], ensure_ascii=False)
+            prompt = self._build_flow_construction_prompt(inputs["text"], phases_json)
+            if self.llm:
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                flow_data = self._parse_json_response(response)
+            else:
+                flow_data = {"flow": {"type": "phase", "phase_id": "1"}}
+            return {"flow_data": flow_data}
+        
+        flow_chain = TransformChain(
+            input_variables=["text", "phases_data"],
+            output_variables=["flow_data"],
+            transform=flow_builder
+        )
+        
+        # 组合成序列链 - 修复变量依赖关系
         processing_chain = SequentialChain(
-            chains=[test_type_chain, params_chain, work_mode_chain],
+            chains=[test_type_chain, params_chain, phases_chain, flow_chain],
             input_variables=["text"],
-            output_variables=["test_type_prompt", "params_prompt", "stages_prompt"],
+            output_variables=["test_type", "extracted_params", "phases_data", "flow_data"],
             verbose=True
         )
         
@@ -291,6 +381,7 @@ class WorkloadRecognitionService:
 
         输出: 耐久测试
 
+        测试描述：
         {text}
 
         请分析测试描述中的关键词和测试目的，只回答"耐久测试"或"性能测试"。
@@ -302,120 +393,394 @@ class WorkloadRecognitionService:
         从以下测试描述中提取关键参数，输出标准JSON格式。
 
         需要提取的参数包括：
-        - 吸气压力
-        - 排气压力  
+        - 吸气压力 (可能多个)
+        - 排气压力 (可能多个)
         - 电压
         - 过热度
         - 过冷度
-        - 转速
+        - 转速（可能多个）
         - 环温
         - 低温（如果有）
         - 高温（如果有）
-        - 温度变化速率（如果有）
+        - 温度变化速率（如果有，可能多个）
         - 低温停留时间（如果有）
-        - 工作模式
+        - 工作模式 (如果有)
 
         测试描述：
         {text}
 
-        请输出JSON格式，例如：
+        **重要：必须只返回JSON格式，不要任何其他文字说明！**
+
+        请输出JSON格式，不要包含markdown代码块，例如：
         {{
             "吸气压力": "0.1±0.01MPa",
             "排气压力": "1.0±0.02MPa",
+            "转速1": "800±50rmp",
+            "转速2": "11000rmp",
+            "过热度": "10±1°C",
+            "过冷度": "5°C",
+            "环温": "-20℃±1°C",
             "电压": "650±5V",
             "工作模式": "具体的工作模式描述"
         }}
         """
     
-    def _build_work_mode_prompt(self, text: str) -> str:
+    def _build_phases_analysis_prompt(self, text: str, test_type: str) -> str:
         """构建工作模式解析提示词"""
         return f"""
-        分析以下测试描述中的工作模式，将其分解为具体的测试阶段。
+        分析以下{test_type}的工作模式，将其分解为独立的测试阶段(phase)。
 
-        每个阶段需要包含：
-        - 初始温度
-        - 目标温度  
-        - 温度变化率（正数表示升温，负数表示降温，0表示保温）
-        - 持续时间(s)
+        每个阶段需要包含完整的参数：
+        - suction_pressure: 吸气压力(MPa) - 数值类型
+        - discharge_pressure: 排气压力(MPa) - 数值类型  
+        - voltage: 电压(V) - 数值类型
+        - superheat: 过热度 - 数值类型
+        - subcooling: 过冷度 - 数值类型
+        - initial_speed: 初始转速(rpm) - 数值类型
+        - target_speed: 目标转速(rpm) - 数值类型
+        - speed_duration: 转速持续时间(s) - 数值类型
+        - initial_temp: 起始温度(°C) - 数值类型
+        - target_temp: 目标温度(°C) - 数值类型
+        - temp_change_rate: 温度变化率(°C/s) - 数值类型，注意是秒不是分钟
+        - temp_duration: 温度持续时间(s) - 数值类型
 
-        **示例1:**
-        输入: "产品在-20℃环境下开启，以1℃/min的变换速率调节至-40℃，保持120h后再以1℃/min的变化速率恢复至常温。"
-        输出:
+
+        注意：
+        1. 每个阶段不仅温度可能变化，吸排气压力、转速也可能发生变化
+        2. 如果某参数在阶段中保持不变，initial和target值相同
+        3. 温度变化率单位为°C/s（注意：1°C/min = 0.0167°C/s）
+        4. 所有数值字段必须是纯数字，不要包含单位
+        5. 自动推导持续时间：duration = abs(target - initial) / rate
+        6. 阶段ID从"1"开始，不要从"0"开始
+        7. speed_duration >= duration
+        8. 没有特别指出，一般情况下初始转速和目标转速是相同
+        9. 上一个阶段的target_speed和下一个阶段的initial_speed是没有关系的
+
+        **示例:**
+        输入: "产品在环境温度75°C下开启，运行工况：吸气压力：0.3Mpa，排气压力：2.5Mpa，电压：650+-5V，过热度：10±1°C，过冷度：5°C，转速：11000rmp，以1°C/min逐步调节至最高温度120°C。到达120后，压缩机工作循环（启动10min后关闭2min）持续4800次"
+        输出：
         {{
-            "stages": [
-                {{
-                    "stage_number": 1,
-                    "initial_temp": -20,
-                    "target_temp": -40,
-                    "temp_change_rate": -1,
-                    "duration": 1200,
-                    "description": "从-20℃降温至-40℃"
+            "phases": {{
+                "1": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650 V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 11000.0,
+                    "target_speed": 11000.0,
+                    "speed_duration": 2700.0,
+                    "initial_temp": 75.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 0.0167,
+                    "temp_duration": 2700.0
                 }},
-                {{
-                    "stage_number": 2,
-                    "initial_temp": -40,
-                    "target_temp": -40,
-                    "temp_change_rate": 0,
-                    "duration": 432000,
-                    "description": "在-40℃保温120小时（7200分钟）"
+                "2": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650.00V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 11000.0,
+                    "target_speed": 11000.0,
+                    "speed_duration": 600.0,
+                    "initial_temp": 120.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 600.0
                 }},
-                {{
-                    "stage_number": 3,
-                    "initial_temp": -40,
-                    "target_temp": 25,
-                    "temp_change_rate": 1,
-                    "duration": 3900,
-                    "description": "从-40℃升温至常温（假设常温为25℃）"
+                "3": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650.00V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 0,
+                    "target_speed": 0,
+                    "speed_duration": 120.0,
+                    "initial_temp": 120.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 120.0
                 }}
-            ]
+            }}
         }}
-        **示例2:**
-        产品在环境温度75°C下开启，运行工况：吸气压力：0.1+-0.01Mpa（A），排气压力：1.0+-0.02Mpa（A），电压：650+-5V，过热度：10±1°C，过冷度：5°C，转速：11000rmp，以1°C/min逐步调节至最高温度120°C
-        输出:
+
+        **示例**:
+        输入：最高工作温度85℃，最低工作温度-10℃，最高转速9600rpm时，按照排气压力2.5MPaA测试。最低转速600rpm 模式2：额定电压、排气压力1.0MPaA，吸气压力0.3MpaA，过热度10℃，过冷度5℃，最低转速运行；模式3：额定电压、排气压力2.5MpaA，吸气压力0.3MpaA，过热度10℃，过冷度5℃，做高转速运行；在室温环境温度下开启，按照模式2，运行16min中后到达最低工作温度，按照模式2，保持30min中的最低工作温度，随后36min中升到最高工作温度，前18分钟按照模式2，后18min按照模式3，保持在最高工作温度模式2运行30min，最后按照模式2，15min中下降到室温。整个测试需要450个循环周期
+        
+        **思维过程:**
+        需要计算温度变化率
+        1. **阶段1**: 从室温开始，按照模式2运行16分钟，达到-10℃，温度变化率：-10-20/(16*60) = -0.03125°C/s
+        2. **阶段2**: 保持-10℃，按照模式2运行30分钟，记录温度和转速
+        3. **阶段3**: 升温到37.5℃，按照模式2运行18分钟，温度变化率：37.5-(-10)/(18*60) = 0.04399°C/s
+        4. **阶段4**: 升温到85℃，按照模式3运行18分钟，温度变化率：85-37.5/(18*60) = 0.04399°C/s
+        5. **阶段5**: 保持在85℃，按照模式2运行30分钟，记录温度和转速
+        6. **阶段6**: 降温到室温，按照模式2运行15分钟，温度变化率：20-85/(15*60) = -0.07222°C/s
+
+        输出：
         {{
-            "stages": [
-                {{
-                    "stage_number": 1,
-                    "initial_temp": 75,
-                    "target_temp": 120,
-                    "temp_change_rate": 1,
-                    "duration": 2700,
-                    "description": "从75℃升温至120℃"
+            "phases": {{
+                "1": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 1.0,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 600.0,
+                    "speed_duration": 960.0,
+                    "initial_temp": 20.0,
+                    "target_temp": -10.0,
+                    "temp_change_rate": -0.03125,
+                    "temp_duration": 960.0
+                }},
+                "2": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 1.0,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 600.0,
+                    "speed_duration": 1800.0,
+                    "initial_temp": -10.0,
+                    "target_temp": -10.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 1800.0
+                }},
+                "3": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 1.0,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 600.0,
+                    "speed_duration": 1080.0,
+                    "initial_temp": -10.0,
+                    "target_temp": 37.5,
+                    "temp_change_rate": 0.04399,
+                    "temp_duration": 1080.0
+                }},
+                "4": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 9600.0,
+                    "speed_duration": 1080.0,
+                    "initial_temp": 37.5,
+                    "target_temp": 85.0,
+                    "temp_change_rate": 0.04399,
+                    "temp_duration": 1080.0
+                }},
+                "5": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 1.0,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 600.0,
+                    "speed_duration": 1800.0,
+                    "initial_temp": 85.0,
+                    "target_temp": 85.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 1800.0
+                }},
+                "6": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 1.0,
+                    "voltage": 650.0,
+                    "superheat": 10.0,
+                    "subcooling": 5.0,
+                    "initial_speed": 600.0,
+                    "target_speed": 600.0,
+                    "speed_duration": 900.0,
+                    "initial_temp": 85.0,
+                    "target_temp": 20.0,
+                    "temp_change_rate": -0.07222,
+                    "temp_duration": 900.0
                 }}
-            ]
+            }}
         }}
+
         测试描述：
         {text}
 
-        请输出JSON格式的阶段列表，例如：
+        **重要：必须只返回JSON格式，不要任何其他文字说明！**
+        **只返回JSON，格式如下（不要任何其他文字）：**
+
+        请输出JSON格式，包含phases字典，例如：
         {{
-            "stages": [
-                {{
-                    "stage_number": 1,
-                    "initial_temp": -20,
-                    "target_temp": -40,
-                    "temp_change_rate": -1,
-                    "duration": 1200,
-                    "description": "降温阶段"
+            "phases": {{
+                "1": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650 V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 11000.0,
+                    "target_speed": 11000.0,
+                    "speed_duration": 2700.0,
+                    "initial_temp": 75.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 1.0,
+                    "temp_duration": 2700.0
                 }},
-                {{
-                    "stage_number": 2, 
-                    "initial_temp": -40,
-                    "target_temp": -40,
-                    "temp_change_rate": 0,
-                    "duration": 432000,
-                    "description": "保温阶段"
+            }}
+        }}
+        """
+    def _build_flow_construction_prompt(self, text: str, phases: str) -> str:
+        """构建流程构造提示词"""
+        return f"""
+        根据测试描述和已分解的阶段，构建测试执行流程(flow)。
+
+        流程可以包含三种节点类型：
+        1. phase节点：{{"type": "phase", "phase_id": "1"}}
+        2. sequence节点：{{"type": "sequence", "children": [...]}}
+        3. loop节点：{{"type": "loop", "count": 100, "children": [...]}}
+         **示例:**
+        输入: 
+        测试描述
+        "产品在环境温度75°C下开启，运行工况：吸气压力：0.3Mpa，排气压力：2.5Mpa，电压：650+-5V，过热度：10±1°C，过冷度：5°C，转速：11000rmp，以1°C/min逐步调节至最高温度120°C。到达120后，压缩机工作循环（启动10min后关闭2min）持续4800次"
+        
+        已分解的阶段
+        {{
+            "phases": {{
+                "1": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650 V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 11000.0,
+                    "target_speed": 11000.0,
+                    "speed_duration": 2700.0,
+                    "initial_temp": 75.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 1.0,
+                    "temp_duration": 2700.0
+                }},
+                "2": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650.00V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 11000.0,
+                    "target_speed": 11000.0,
+                    "speed_duration": 600.0,
+                    "initial_temp": 120.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 600.0
+                }},
+                "3": {{
+                    "suction_pressure": 0.3,
+                    "discharge_pressure": 2.5,
+                    "voltage": "650.00V",
+                    "superheat": "10.00°C",
+                    "subcooling": "5.00°C",
+                    "initial_speed": 0,
+                    "target_speed": 0,
+                    "speed_duration": 120.0,
+                    "initial_temp": 120.0,
+                    "target_temp": 120.0,
+                    "temp_change_rate": 0.0,
+                    "temp_duration": 120.0
                 }}
-            ]
+            }}
+        }}
+        思维过程:
+        1. 整个测试阶段是否需要循环执行？如果是，使用loop节点否者判断是否有不止一个节点
+        2. 如果有多个阶段，使用sequence节点将它们串联起来
+        3. 每个阶段使用phase节点引用已分解的阶段
+        4. 检查到达120°C后是否需要循环执行？如果是，children创建，使用loop节点
+        5.  **循环**: 重复阶段2和3，共4800次
+
+        输出：
+        {{
+            "flow": 
+            {{ 
+                "type": "sequence",
+                "children": [
+                    {{ 
+                        "type": "phase", 
+                        "phaseId": "1"
+                    }},
+                    {{ 
+                        "type": "loop", 
+                        "count": 4800,
+                        "children": [
+                            {{ 
+                                "type": "phase", 
+                                "phaseId": "2"
+                            }},
+                            {{ 
+                                "type": "phase", 
+                                "phaseId": "3"
+                            }}
+                        ]
+                    }}
+                ]
+            }}
+        }}
+
+        测试描述：
+        {text}
+
+        已分解的阶段：
+        {phases}
+
+        **重要：必须只返回JSON格式，不要任何其他文字说明！**
+        **只返回JSON，格式如下（不要任何其他文字）：**
+        请分析测试流程，构建flow结构。输出纯JSON格式，不要包含markdown代码块，例如：
+        {{
+            "flow": {{
+                "type": "sequence",
+                "children": [
+                    {{"type": "phase", "phase_id": "1"}},
+                    {{
+                        "type": "loop",
+                        "count": 5,
+                        "children": [
+                            {{"type": "phase", "phase_id": "2"}},
+                            {{"type": "phase", "phase_id": "3"}}
+                        ]
+                    }}
+                ]
+            }}
         }}
         """
     
     async def switch_llm(self, new_provider: LLMProvider):
         """切换LLM提供商"""
         logger.info(f"切换LLM: {self.preferred_llm.value} -> {new_provider.value}")
-        self.preferred_llm = new_provider
-        self.llm = self._init_llm(new_provider)
-        logger.info(f"✅ LLM切换完成: {new_provider.value}")
+        try:
+            # 保存旧的LLM以防回退
+            old_llm = self.llm
+            old_provider = self.preferred_llm
+            
+            # 尝试初始化新的LLM
+            self.preferred_llm = new_provider
+            self.llm = self._init_llm(new_provider)
+            
+            # 重新构建处理链（虽然结构相同，但需要引用新的LLM）
+            self.processing_chain = self._build_processing_chain()
+            
+            logger.info(f"✅ LLM切换完成: {new_provider.value}")
+            
+        except Exception as e:
+            logger.error(f"❌ LLM切换失败: {e}")
+            # 回退到原来的LLM
+            self.llm = old_llm
+            self.preferred_llm = old_provider
+            self.processing_chain = self._build_processing_chain()
+            raise RuntimeError(f"LLM切换失败: {str(e)}")
     
     async def recognize_from_text(self, input_text: str, language: str = "zh") -> WorkloadResult:
         """从文本识别工况 - 使用LangChain多阶段处理"""
@@ -423,43 +788,63 @@ class WorkloadRecognitionService:
         start_time = datetime.now()
         
         try:
-            # 第一步：判断测试类型
-            test_type_prompt = self._build_test_type_prompt(input_text)
-            test_type_response = await self.llm.ainvoke([HumanMessage(content=test_type_prompt)])
-            test_type = self._parse_test_type(test_type_response)
-            logger.info(f"✅ 测试类型: {test_type.value}")
+            # 使用LangChain处理链进行多阶段处理
+            if self.processing_chain and self.llm:
+                logger.info("🔗 使用LangChain处理链")
+                
+                # 由于LangChain的TransformChain不支持异步，我们手动执行各阶段
+                # 第一步：判断测试类型
+                test_type_prompt = self._build_test_type_prompt(input_text)
+                test_type_response = await self.llm.ainvoke([HumanMessage(content=test_type_prompt)])
+                test_type = self._parse_test_type(test_type_response)
+                logger.info(f"✅ 测试类型: {test_type}")
+                
+                # 第二步：提取基础参数
+                params_prompt = self._build_params_extraction_prompt(input_text)
+                params_response = await self.llm.ainvoke([HumanMessage(content=params_prompt)])
+                extracted_params = self._parse_json_response(params_response)
+                logger.info(f"✅ 提取参数: {len(extracted_params)} 个")
+                
+                # 第三步：分解阶段
+                phases_prompt = self._build_phases_analysis_prompt(input_text, test_type)
+                phases_response = await self.llm.ainvoke([HumanMessage(content=phases_prompt)])
+                phases_data = self._parse_json_response(phases_response)
+                logger.info(f"✅ 分解阶段: {len(phases_data.get('phases', {}))} 个")
+                
+                # 第四步：构建流程
+                flow_prompt = self._build_flow_construction_prompt(input_text, json.dumps(phases_data, ensure_ascii=False))
+                flow_response = await self.llm.ainvoke([HumanMessage(content=flow_prompt)])
+                flow_data = self._parse_json_response(flow_response)
+                logger.info(f"✅ 构建流程完成")
+                
+            else:
+                logger.warning("⚠️ LangChain处理链或LLM不可用，使用默认处理")
+                test_type = "耐久测试"
+                extracted_params = {}
+                phases_data = {"phases": {"1": self._get_default_phase()}}
+                flow_data = {"flow": {"type": "phase", "phase_id": "1"}}
             
-            # 第二步：提取参数
-            params_prompt = self._build_params_extraction_prompt(input_text)
-            params_response = await self.llm.ainvoke([HumanMessage(content=params_prompt)])
-            extracted_params = self._parse_json_response(params_response)
-            logger.info(f"✅ 提取参数: {len(extracted_params)} 个")
-            
-            # 第三步：解析工作模式生成阶段
-            stages_prompt = self._build_work_mode_prompt(input_text)
-            stages_response = await self.llm.ainvoke([HumanMessage(content=stages_prompt)])
-            print(stages_response)
-            stages_data = self._parse_json_response(stages_response)
-            logger.info(f"✅ 解析阶段: {len(stages_data.get('stages', []))} 个")
-            
-            # 第四步：调用MCP进行单位转换和校验
+            # 第五步：调用MCP进行单位转换和校验
             standardized_params = await self._call_mcp_unit_converter(extracted_params)
             validation_result = await self._call_mcp_physics_validator(standardized_params)
-            
-            # 第五步：构建最终阶段
-            stages = self._build_workload_stages(stages_data.get('stages', []), standardized_params)
+
+            if "flow" in flow_data:
+                actual_flow_data = flow_data["flow"]  # ✅ 提取真正的flow数据
+            else:
+                actual_flow_data = flow_data
             
             # 第六步：构建最终结果
             processing_time = (datetime.now() - start_time).total_seconds()
             result = self._build_final_result(
-                test_type, 
-                standardized_params, 
-                stages, 
-                validation_result, 
+                test_type,
+                phases_data.get('phases', {}),
+                actual_flow_data,  # 使用处理过的flow数据
+                validation_result,
                 {
                     "llm_used": self.preferred_llm.value,
                     "processing_time": processing_time,
-                    "language": language
+                    "language": language,
+                    "langchain_used": bool(self.processing_chain and self.llm)
                 }
             )
             
@@ -469,6 +854,23 @@ class WorkloadRecognitionService:
         except Exception as e:
             logger.error(f"❌ 工况识别失败: {e}")
             raise
+
+    def _get_default_phase(self) -> Dict[str, Any]:
+        """获取默认阶段数据"""
+        return {
+            "suction_pressure": 0.1,
+            "discharge_pressure": 1.0,
+            "voltage": 650,
+            "superheat": 10,
+            "subcooling": 5,
+            "initial_speed": 800,
+            "target_speed": 800,
+            "speed_duration": 3600,
+            "initial_temp": 20,
+            "target_temp": 20,
+            "temp_change_rate": 0,
+            "temp_duration": 3600
+        }
     
     async def recognize_from_ocr(self, ocr_params: Dict[str, str], language: str = "zh") -> WorkloadResult:
         """从OCR结果识别工况"""
@@ -480,37 +882,50 @@ class WorkloadRecognitionService:
         
         return await self.recognize_from_text(text_description, language)
     
-    def _parse_test_type(self, response: str) -> TestType:
+    def _parse_test_type(self, response: str) -> str:
         """解析测试类型"""
         response = response.strip()
         if "耐久测试" in response:
-            return TestType.ENDURANCE
+            return "耐久测试"
         elif "性能测试" in response:
-            return TestType.PERFORMANCE
+            return "性能测试"
         else:
             # 默认判断
             if any(keyword in response.lower() for keyword in ["耐久", "寿命", "长期", "循环"]):
-                return TestType.ENDURANCE
+                return "耐久测试"
             else:
-                return TestType.PERFORMANCE
+                return "性能测试"
     
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """解析JSON响应"""
+        """解析JSON响应 - 支持markdown代码块"""
         try:
             # 直接解析JSON
             return json.loads(response)
         except json.JSONDecodeError:
-            # 尝试提取JSON部分
-            import re
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                try:
-                    return json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    pass
+            try:
+                # 尝试提取markdown代码块中的JSON
+                import re
+                
+                # 匹配 ```json ... ``` 格式
+                json_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response, re.DOTALL | re.IGNORECASE)
+                if json_match:
+                    json_content = json_match.group(1).strip()
+                    logger.info(f"从markdown代码块中提取JSON: {json_content[:100]}...")
+                    return json.loads(json_content)
+                
+                # 匹配普通的 {...} 格式
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    json_content = json_match.group().strip()
+                    logger.info(f"从文本中提取JSON: {json_content[:100]}...")
+                    return json.loads(json_content)
+                    
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON解析仍然失败: {e}")
+                pass
             
             # 解析失败，返回空字典
-            logger.warning(f"JSON解析失败: {response[:200]}...")
+            logger.warning(f"JSON解析失败，响应内容: {response[:500]}...")
             return {}
     
     async def _call_mcp_unit_converter(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -553,54 +968,165 @@ class WorkloadRecognitionService:
             logger.error(f"MCP物理校验调用失败: {e}")
             return {"valid": True, "errors": [], "warnings": []}
     
-    def _build_workload_stages(self, stages_data: List[Dict[str, Any]], 
-                             base_params: Dict[str, Any]) -> List[WorkloadStage]:
-        """构建工况阶段"""
-        stages = []
-        
-        # 从基础参数中提取固定值
-        fixed_params = {
-            "suction_pressure": self._parse_pressure(base_params.get("吸气压力", "0.1MPa")),
-            "discharge_pressure": self._parse_pressure(base_params.get("排气压力", "1.0MPa")),
-            "voltage": base_params.get("电压", "650±5V"),
-            "superheat": base_params.get("过热度", "10±1°C"),
-            "subcooling": base_params.get("过冷度", "5°C"),
-            "speed": base_params.get("转速", "800±50rpm"),
-            "ambient_temp": base_params.get("环温", "-20°C±1°C")
-        }
-        
-        for stage_data in stages_data:
-            stage = WorkloadStage(
-                stage_number=stage_data.get("stage_number", len(stages) + 1),
-                initial_temp=float(stage_data.get("initial_temp", 20)),
-                target_temp=float(stage_data.get("target_temp", 20)),
-                temp_change_rate=float(stage_data.get("temp_change_rate", 0)),
-                duration=float(stage_data.get("duration", 3600)),
-                **fixed_params
-            )
-            stages.append(stage)
-        
-        return stages
-    
-    def _build_final_result(self, test_type: TestType, params: Dict[str, Any], 
-                          stages: List[WorkloadStage], validation_result: Dict[str, Any],
+    def _build_final_result(self, test_type: str, phases_data: Dict[str, Any], 
+                          flow_data: Dict[str, Any], validation_result: Dict[str, Any],
                           processing_info: Dict[str, Any]) -> WorkloadResult:
         """构建最终结果"""
         # 根据测试类型设置容差
-        if test_type == TestType.ENDURANCE:
+        if test_type == TestType.ENDURANCE.value or test_type == "耐久测试":
             tolerances = {"suction": 0.01, "discharge": 0.02}
         else:  # PERFORMANCE
             tolerances = {"suction": 0.005, "discharge": 0.01}
         
+        # 构建阶段字典 - 处理数据类型转换
+        phases = {}
+        for phase_id, phase_data in phases_data.items():
+            try:
+                # 确保所有数值字段是正确的类型
+                cleaned_phase_data = {}
+                for key, value in phase_data.items():
+                    if key in ['suction_pressure', 'discharge_pressure', 'voltage', 'superheat', 'subcooling',
+                              'initial_speed', 'target_speed', 'speed_duration', 'initial_temp', 'target_temp',
+                              'temp_change_rate', 'temp_duration']:
+                        # 转换为数值类型
+                        if isinstance(value, str):
+                            # 移除可能的单位和符号
+                            import re
+                            numeric_value = re.search(r'([-+]?\d*\.?\d+)', str(value))
+                            if numeric_value:
+                                cleaned_phase_data[key] = float(numeric_value.group(1))
+                            else:
+                                cleaned_phase_data[key] = 0.0
+                        else:
+                            cleaned_phase_data[key] = float(value) if value is not None else 0.0
+                    else:
+                        cleaned_phase_data[key] = value
+                
+                phases[phase_id] = Phase(**cleaned_phase_data)
+                
+            except Exception as e:
+                logger.warning(f"阶段{phase_id}数据转换失败: {e}, 使用默认值")
+                phases[phase_id] = Phase(**self._get_default_phase())
+        
+        # 如果没有阶段数据，创建一个默认阶段
+        if not phases:
+            phases["1"] = Phase(**self._get_default_phase())
+        
+        # 构建流程节点
+        logger.info(f"开始构建流程节点，flow_data: {flow_data}")
+        try:
+            flow_node = self._build_flow_node(flow_data)
+            logger.info(f"流程节点构建完成: type={flow_node.type}")
+            
+            # 测试序列化以确保children被正确包含
+            try:
+                # 使用自定义序列化方法
+                flow_dict = self._serialize_flow_node(flow_node)
+                logger.info(f"flow节点序列化测试: {json.dumps(flow_dict, ensure_ascii=False)[:200]}...")
+                
+                # 验证children是否在序列化结果中
+                if 'children' in flow_dict:
+                    logger.info(f"✅ children字段已包含在序列化结果中，数量: {len(flow_dict.get('children', []))}")
+                else:
+                    logger.warning("⚠️ children字段未在序列化结果中")
+                    
+            except Exception as e:
+                logger.error(f"flow节点序列化失败: {e}")
+                # 如果序列化失败，创建一个简单的默认节点
+                flow_node = PhaseNode(phase_id="1")
+            
+        except Exception as e:
+            logger.error(f"流程节点构建失败: {e}, 使用默认节点")
+            flow_node = PhaseNode(phase_id="1")
+        
         return WorkloadResult(
-            test_type=test_type,
+            test_type=test_type,  # 直接使用字符串，不需要.value
             suction_pressure_tolerance=tolerances["suction"],
             discharge_pressure_tolerance=tolerances["discharge"],
-            total_stages=len(stages),
-            stages=stages,
+            total_phases=len(phases),
+            phases=phases,
+            flow=self._serialize_flow_node(flow_node),  # 使用自定义序列化
             validation_errors=validation_result.get("errors", []),
             processing_info=processing_info
-        )
+        )    
+    
+    def _build_flow_node(self, flow_data: Dict[str, Any]) -> FlowNode:
+        """递归构建流程节点"""
+        if not flow_data or "type" not in flow_data:
+            logger.warning("flow_data为空或缺少type字段，返回默认phase节点")
+            return PhaseNode(phase_id="1")
+        
+        node_type = flow_data["type"]
+        logger.info(f"构建节点类型: {node_type}")
+        
+        if node_type == "phase":
+            # 兼容 phaseId 和 phase_id 两种字段名
+            phase_id = flow_data.get("phase_id") or flow_data.get("phaseId", "1")
+            logger.info(f"构建phase节点，phase_id: {phase_id}")
+            return PhaseNode(type="phase", phase_id=str(phase_id))
+            
+        elif node_type == "sequence":
+            children = []
+            children_data = flow_data.get("children", [])
+            logger.info(f"构建sequence节点，子节点数量: {len(children_data)}")
+            
+            for i, child_data in enumerate(children_data):
+                logger.info(f"处理子节点{i}: {child_data}")
+                try:
+                    child_node = self._build_flow_node(child_data)
+                    children.append(child_node)
+                    logger.info(f"子节点{i}构建成功: type={child_node.type}")
+                except Exception as e:
+                    logger.error(f"子节点{i}构建失败: {e}")
+            
+            logger.info(f"sequence节点构建完成，实际子节点数量: {len(children)}")
+            # 直接创建SequenceNode
+            return SequenceNode(type="sequence", children=children)
+            
+        elif node_type == "loop":
+            children = []
+            children_data = flow_data.get("children", [])
+            count = flow_data.get("count", 1)
+            logger.info(f"构建loop节点，循环次数: {count}, 子节点数量: {len(children_data)}")
+            
+            for i, child_data in enumerate(children_data):
+                logger.info(f"处理循环子节点{i}: {child_data}")
+                try:
+                    child_node = self._build_flow_node(child_data)
+                    children.append(child_node)
+                    logger.info(f"循环子节点{i}构建成功: type={child_node.type}")
+                except Exception as e:
+                    logger.error(f"循环子节点{i}构建失败: {e}")
+            
+            logger.info(f"loop节点构建完成，实际子节点数量: {len(children)}")
+            # 直接创建LoopNode
+            return LoopNode(type="loop", count=count, children=children)
+            
+        else:
+            logger.warning(f"未知的节点类型: {node_type}，使用默认phase节点")
+            return PhaseNode(phase_id="1")
+        
+    def _serialize_flow_node(self, node: FlowNode) -> Dict[str, Any]:
+        """自定义序列化Flow节点，确保所有字段都被包含"""
+        if isinstance(node, PhaseNode):
+            return {
+                "type": node.type,
+                "phase_id": node.phase_id
+            }
+        elif isinstance(node, SequenceNode):
+            return {
+                "type": node.type,
+                "children": [self._serialize_flow_node(child) for child in node.children]
+            }
+        elif isinstance(node, LoopNode):
+            return {
+                "type": node.type,
+                "count": node.count,
+                "children": [self._serialize_flow_node(child) for child in node.children]
+            }
+        else:
+            # 回退到默认序列化
+            return node.dict()
     
     def _ocr_params_to_text(self, ocr_params: Dict[str, str]) -> str:
         """将OCR参数转换为文本描述"""
@@ -609,26 +1135,27 @@ class WorkloadRecognitionService:
             lines.append(f"{key}：{value}")
         return "\n".join(lines)
     
-    def _parse_pressure(self, pressure_str: str) -> float:
-        """解析压力值"""
-        import re
-        match = re.search(r'([\d.]+)', str(pressure_str))
-        return float(match.group(1)) if match else 0.0
-    
     def get_service_status(self) -> Dict[str, Any]:
         """获取服务状态"""
         return {
             "service": "工况识别服务",
-            "version": "2.1.0",
-            "current_llm": self.preferred_llm.value,
+            "version": "3.0.0",
+            "current_llm": self.preferred_llm.value if self.llm else "None",
             "mcp_server": self.mcp_url,
             "features": {
                 "langchain_integration": True,
                 "multi_llm_support": True,
                 "mcp_validation": True,
-                "ocr_integration": True
+                "ocr_integration": True,
+                "new_json_structure": True,
+                "phase_flow_separation": True
             },
-            "supported_test_types": [t.value for t in TestType],
+            "supported_test_types": ["耐久测试", "性能测试"],
+            "json_structure": {
+                "phases": "独立阶段定义，支持压力、转速、温度全参数变化",
+                "flow": "递归流程结构，支持phase/sequence/loop节点",
+                "auto_duration": "自动推导温度和转速变化持续时间"
+            },
             "status": "operational"
         }
 

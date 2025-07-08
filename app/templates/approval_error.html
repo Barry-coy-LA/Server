@@ -1,4 +1,4 @@
-<!-- app/templates/approval_error.html - 审批错误页面 -->
+<!-- app/templates/approval_error.html - 修复版审批错误页面 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -455,7 +455,7 @@
         <div class="help-info fade-in-delay-3">
             <h3>可能的解决方案</h3>
             <ul>
-                <li><strong>链接已过期：</strong>审批链接的有效期为30分钟，请联系报告提交人重新发送审批邮件</li>
+                <li><strong>链接已过期：</strong>审批链接无时间限制，请检查链接是否完整</li>
                 <li><strong>链接已使用：</strong>每个审批链接只能使用一次，如果已经完成审批则无法重复操作</li>
                 <li><strong>网络访问限制：</strong>审批链接仅在公司局域网内有效，请确保您在正确的网络环境中</li>
                 <li><strong>链接格式错误：</strong>请检查邮件中的链接是否完整，避免复制时出现截断</li>
@@ -485,10 +485,10 @@
         <div class="footer fade-in-delay-4">
             <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
             <p>如需技术支持，请联系系统管理员或报告提交人员</p>
-            <p>系统版本：v2.1.0 | 错误时间：<span id="errorTime"></span></p>
+            <p>系统版本：v2.2.0 | 错误时间：<span id="errorTime"></span></p>
             
             <div class="error-id">
-                错误ID：ERROR_{{ error.upper().replace(' ', '_') }}_{{ moment().format('YYYYMMDDHHmmss') }}
+                错误ID：ERROR_<span id="errorIdGenerated"></span>
             </div>
         </div>
     </div>
@@ -503,11 +503,19 @@
             const accessTimeEl = document.getElementById('accessTime');
             const errorTimeEl = document.getElementById('errorTime');
             const userAgentEl = document.getElementById('userAgent');
+            const errorIdEl = document.getElementById('errorIdGenerated');
             
             if (currentTimeEl) currentTimeEl.textContent = timeStr;
             if (accessTimeEl) accessTimeEl.textContent = timeStr;
             if (errorTimeEl) errorTimeEl.textContent = timeStr;
             if (userAgentEl) userAgentEl.textContent = navigator.userAgent;
+            
+            // 生成错误ID（修复的版本）
+            if (errorIdEl) {
+                const errorType = '{{ error }}'.toUpperCase().replace(/\s+/g, '_');
+                const timestamp = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+                errorIdEl.textContent = `${errorType}_${timestamp}`;
+            }
 
             // 网络环境检查
             checkNetworkEnvironment();
@@ -550,16 +558,6 @@
                         location.reload();
                     }
                 }, 3000);
-            }
-
-            // 错误报告发送（如果有监控系统）
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'approval_error', {
-                    'error_type': '{{ error }}',
-                    'error_message': '{{ message }}',
-                    'client_ip': '{{ client_ip if client_ip else "unknown" }}',
-                    'timestamp': now.toISOString()
-                });
             }
 
             // 页面可见性检测
@@ -669,115 +667,15 @@
             }, 10000);
         }
 
-        // 网络连接检测
-        function checkConnectivity() {
-            return new Promise((resolve) => {
-                const img = new Image();
-                const timeout = setTimeout(() => {
-                    resolve(false);
-                }, 5000);
-                
-                img.onload = () => {
-                    clearTimeout(timeout);
-                    resolve(true);
-                };
-                
-                img.onerror = () => {
-                    clearTimeout(timeout);
-                    resolve(false);
-                };
-                
-                // 尝试加载一个小图片来检测连接
-                img.src = '/static/favicon.ico?' + Date.now();
-            });
-        }
-
-        // 页面性能监控
-        window.addEventListener('load', function() {
-            const loadTime = performance.now();
-            console.log(`错误页面加载时间: ${loadTime.toFixed(2)}ms`);
-            
-            // 检测页面加载性能
-            if (loadTime > 3000) {
-                console.warn('页面加载较慢，可能存在网络问题');
-            }
-        });
-
-        // 浏览器兼容性检查
-        function checkBrowserCompatibility() {
-            const warnings = [];
-            
-            if (!window.fetch) {
-                warnings.push('您的浏览器版本较旧，可能影响系统功能');
-            }
-            
-            if (!window.Promise) {
-                warnings.push('浏览器不支持某些现代功能');
-            }
-            
-            if (!document.querySelector) {
-                warnings.push('建议更新到最新版本的浏览器');
-            }
-            
-            if (warnings.length > 0) {
-                console.warn('浏览器兼容性警告:', warnings);
-                
-                // 显示兼容性提示
-                setTimeout(() => {
-                    const compatible = confirm(
-                        '检测到浏览器兼容性问题：\n\n' + 
-                        warnings.join('\n') + 
-                        '\n\n建议使用Chrome、Firefox、Edge等现代浏览器。\n\n是否继续使用当前浏览器？'
-                    );
-                    
-                    if (!compatible) {
-                        window.close();
-                    }
-                }, 2000);
-            }
-        }
-
-        // 执行浏览器兼容性检查
-        checkBrowserCompatibility();
-
-        // 错误重试机制
-        function retryWithDelay(retryCount = 0) {
-            const maxRetries = 3;
-            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // 指数退避
-            
-            if (retryCount < maxRetries) {
-                setTimeout(() => {
-                    checkConnectivity().then(isConnected => {
-                        if (isConnected) {
-                            if (confirm('网络连接已恢复，是否重新尝试访问？')) {
-                                location.reload();
-                            }
-                        } else {
-                            retryWithDelay(retryCount + 1);
-                        }
-                    });
-                }, delay);
-            }
-        }
-
-        // 如果是网络相关错误，启动重试机制
-        const errorMessage = '{{ message }}';
-        if (errorMessage.includes('网络') || errorMessage.includes('连接') || errorMessage.includes('超时')) {
-            retryWithDelay();
-        }
-
-        // 添加右键菜单增强
-        document.addEventListener('contextmenu', function(e) {
-            // 在错误页面允许右键菜单，方便调试
-            console.log('右键菜单：允许查看页面源码和开发者工具');
-        });
-
         // 复制错误信息功能
         function copyErrorInfo() {
+            const now = new Date();
+            const errorId = document.getElementById('errorIdGenerated').textContent;
             const errorInfo = `
 错误类型: {{ error }}
 错误描述: {{ message }}
-时间: ${new Date().toLocaleString()}
+错误ID: ERROR_${errorId}
+时间: ${now.toLocaleString()}
 URL: ${window.location.href}
 用户代理: ${navigator.userAgent}
 IP地址: {{ client_ip if client_ip else "未知" }}
@@ -812,25 +710,40 @@ IP地址: {{ client_ip if client_ip else "未知" }}
             actionsDiv.appendChild(copyBtn);
         }
 
-        // 错误统计和上报
-        if (window.navigator.sendBeacon) {
-            const errorData = JSON.stringify({
-                type: 'approval_error',
-                error: '{{ error }}',
-                message: '{{ message }}',
-                timestamp: new Date().toISOString(),
-                url: window.location.href,
-                userAgent: navigator.userAgent,
-                clientIP: '{{ client_ip if client_ip else "unknown" }}'
-            });
+        // 浏览器兼容性检查
+        function checkBrowserCompatibility() {
+            const warnings = [];
             
-            // 发送错误统计（如果有统计服务）
-            try {
-                navigator.sendBeacon('/api/error-report', errorData);
-            } catch (e) {
-                console.log('错误统计发送失败:', e);
+            if (!window.fetch) {
+                warnings.push('您的浏览器版本较旧，可能影响系统功能');
+            }
+            
+            if (!window.Promise) {
+                warnings.push('浏览器不支持某些现代功能');
+            }
+            
+            if (!document.querySelector) {
+                warnings.push('建议更新到最新版本的浏览器');
+            }
+            
+            if (warnings.length > 0) {
+                console.warn('浏览器兼容性警告:', warnings);
             }
         }
+
+        // 执行浏览器兼容性检查
+        checkBrowserCompatibility();
+
+        // 页面性能监控
+        window.addEventListener('load', function() {
+            const loadTime = performance.now();
+            console.log(`错误页面加载时间: ${loadTime.toFixed(2)}ms`);
+        });
+
+        // 错误处理
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
     </script>
 </body>
 </html>

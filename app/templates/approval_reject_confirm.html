@@ -1,4 +1,4 @@
-<!-- app/templates/approval_reject_confirm.html - 驳回确认页面（带原因输入） -->
+<!-- app/templates/approval_reject_confirm.html - 修复版驳回确认页面（带原因输入） -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -463,6 +463,12 @@
                 <span class="info-label">审批人</span>
                 <span class="info-value">{{ approval.approver_email }}</span>
             </div>
+            {% if stage_text %}
+            <div class="info-row">
+                <span class="info-label">审批阶段</span>
+                <span class="info-value">{{ stage_text }}</span>
+            </div>
+            {% endif %}
         </div>
 
         <form method="POST" action="/approval/reject" id="rejectForm">
@@ -518,6 +524,7 @@
                     <li>此操作不可撤销，驳回原因将被永久记录</li>
                     <li>操作员将收到包含驳回原因的详细通知</li>
                     <li>您的审批决定将记录IP地址和操作时间用于审计</li>
+                    <li><strong>审批链接无时间限制，可稍后完成</strong></li>
                 </ul>
             </div>
 
@@ -539,12 +546,20 @@
         <div class="footer">
             <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
             <p>本页面仅在局域网内有效 · 请确保在安全的网络环境中操作</p>
-            <p>驳回时间：{{ moment().format('YYYY年MM月DD日 HH:mm:ss') }}</p>
+            <p>驳回时间：<span id="currentTime"></span></p>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 设置当前时间（修复版本）
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN');
+            const currentTimeEl = document.getElementById('currentTime');
+            if (currentTimeEl) {
+                currentTimeEl.textContent = timeStr;
+            }
+            
             const form = document.getElementById('rejectForm');
             const reasonTextarea = document.getElementById('reason');
             const submitBtn = document.getElementById('submitBtn');

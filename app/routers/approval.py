@@ -1,4 +1,4 @@
-# app/routers/approval.py - 重新设计的审批路由
+# app/routers/approval.py - 两轮审批版本（修复版）
 from fastapi import APIRouter, HTTPException, Request, Form, Query, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -6,10 +6,10 @@ from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 import logging
 import socket
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from app.services.approval_service import ApprovalService, ApprovalRequest
-from app.services.usage_tracker import track_usage_simple
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/approval", tags=["实验审批系统"])
@@ -37,18 +37,32 @@ def get_approval_service():
         except:
             local_ip = "127.0.0.1"
         
-        approval_service = ApprovalService(local_ip=local_ip, port=8000)
-        logger.info(f"审批服务已初始化 - 服务器地址: {local_ip}:8000")
+        # MySQL数据库配置（修复版）
+        mysql_config = {
+            'host': 'localhost',
+            'port': 3306,
+            'user': 'root',
+            'password': 'tianmu008',
+            'database': 'testdata'
+        }
+        
+        approval_service = ApprovalService(
+            local_ip=local_ip, 
+            port=8000, 
+            mysql_config=mysql_config
+        )
+        logger.info(f"两轮审批服务已初始化 - 服务器地址: {local_ip}:8000, 数据库: MySQL")
     
     return approval_service
 
 class SubmitReportRequest(BaseModel):
-    """提交报告请求模型"""
+    """提交报告请求模型 - 支持两轮审批"""
     report_id: str
     title: str
     content: str
     operator: str
-    approver_email: EmailStr
+    first_approver_email: EmailStr  # 第一轮审批人邮箱
+    second_approver_email: EmailStr  # 第二轮审批人邮箱
     
     # SMTP配置
     smtp_server: str
@@ -85,18 +99,11 @@ def validate_internal_ip(request: Request) -> bool:
     return service.validate_internal_ip(client_ip)
 
 @router.post("/submit_report")
-@track_usage_simple("approval_submit")
 async def submit_report(request: Request, report_data: SubmitReportRequest):
     """
-    上位机提交实验报告审批请求
-    
-    功能：
-    1. 接收上位机的审批请求
-    2. 生成PDF报告
-    3. 创建审批Token
-    4. 发送审批邮件
+    上位机提交实验报告审批请求（两轮审批）
     """
-    logger.info(f"收到报告审批请求 - ID: {report_data.report_id}")
+    logger.info(f"收到两轮审批请求 - ID: {report_data.report_id}")
     
     try:
         # 验证请求来源
@@ -113,7 +120,8 @@ async def submit_report(request: Request, report_data: SubmitReportRequest):
             title=report_data.title,
             content=report_data.content,
             operator=report_data.operator,
-            approver_email=report_data.approver_email,
+            first_approver_email=report_data.first_approver_email,
+            second_approver_email=report_data.second_approver_email,
             smtp_server=report_data.smtp_server,
             smtp_port=report_data.smtp_port,
             from_email=report_data.from_email,
@@ -127,10 +135,10 @@ async def submit_report(request: Request, report_data: SubmitReportRequest):
         result = await service.submit_approval_request(approval_request)
         
         if result['success']:
-            logger.info(f"审批请求处理成功 - {report_data.report_id}")
+            logger.info(f"两轮审批请求处理成功 - {report_data.report_id}")
             return JSONResponse(content=result)
         else:
-            logger.error(f"审批请求处理失败 - {report_data.report_id}: {result['message']}")
+            logger.error(f"两轮审批请求处理失败 - {report_data.report_id}: {result['message']}")
             raise HTTPException(
                 status_code=500,
                 detail=result['message']
@@ -139,7 +147,7 @@ async def submit_report(request: Request, report_data: SubmitReportRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"提交审批请求失败: {str(e)}")
+        logger.error(f"提交两轮审批请求失败: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"审批请求处理失败: {str(e)}"
@@ -151,14 +159,7 @@ async def approve_report(
     token: str = Query(..., description="审批Token"),
     confirm: Optional[str] = Query(None, description="确认参数")
 ):
-    """
-    处理审批通过请求
-    
-    流程：
-    1. 验证内网访问
-    2. 验证Token有效性
-    3. 显示确认页面或处理审批
-    """
+    """处理审批通过请求"""
     logger.info(f"收到审批通过请求 - Token: {token[:8]}...")
     
     try:
@@ -179,7 +180,7 @@ async def approve_report(
         # 如果没有确认参数，先验证token并显示确认页面
         if confirm != 'yes':
             # 获取审批记录用于显示确认页面
-            record = service.database.get_record_by_token(token, 'approve')
+            record = service.database.get_approval_by_token(token)
             
             if not record:
                 return templates.TemplateResponse(
@@ -191,15 +192,16 @@ async def approve_report(
                     }
                 )
             
-            if record.is_expired():
-                return templates.TemplateResponse(
-                    "approval_error.html",
-                    {
-                        "request": request,
-                        "error": "链接已过期",
-                        "message": "该审批链接已超过有效期（30分钟）"
-                    }
-                )
+            # 取消时间限制检查
+            # if record.is_expired():
+            #     return templates.TemplateResponse(
+            #         "approval_error.html",
+            #         {
+            #             "request": request,
+            #             "error": "链接已过期",
+            #             "message": "该审批链接已超过有效期"
+            #         }
+            #     )
             
             if record.status != 'pending':
                 return templates.TemplateResponse(
@@ -211,6 +213,9 @@ async def approve_report(
                     }
                 )
             
+            # 添加审批阶段信息
+            stage_text = f"第{record.current_stage}轮" if record.current_stage else ""
+            
             # 显示确认页面
             return templates.TemplateResponse(
                 "approval_confirm.html",
@@ -219,6 +224,7 @@ async def approve_report(
                     "approval": record,
                     "action": "approve",
                     "action_text": "通过",
+                    "stage_text": stage_text,
                     "confirm_url": f"/approval/approve?token={token}&confirm=yes"
                 }
             )
@@ -231,14 +237,27 @@ async def approve_report(
         )
         
         if result['success']:
-            logger.info(f"报告审批通过 - {result['report_id']}")
+            stage_text = f"第{result.get('stage', '')}轮" if result.get('stage') else ""
+            next_action = result.get('next_action', '')
+            
+            # 根据下一步动作设置不同的消息
+            if next_action == 'start_second_stage':
+                message = f"{stage_text}审批已通过，第二轮审批邮件已发送"
+            elif next_action == 'final_approved':
+                message = f"{stage_text}审批已通过，报告最终批准"
+            else:
+                message = f"{stage_text}审批已通过"
+            
+            logger.info(f"报告{stage_text}审批通过 - {result['report_id']}")
             return templates.TemplateResponse(
                 "approval_success.html",
                 {
                     "request": request,
                     "approval": result['record'],
                     "action": "通过",
-                    "message": "实验报告审批已通过"
+                    "stage_text": stage_text,
+                    "message": message,
+                    "next_action": next_action
                 }
             )
         else:
@@ -268,9 +287,7 @@ async def reject_report(
     token: str = Query(..., description="驳回Token"),
     confirm: Optional[str] = Query(None, description="确认参数")
 ):
-    """
-    处理审批驳回请求（显示确认页面）
-    """
+    """处理审批驳回请求（显示确认页面）"""
     logger.info(f"收到审批驳回请求 - Token: {token[:8]}...")
     
     try:
@@ -289,7 +306,7 @@ async def reject_report(
         service = get_approval_service()
         
         # 验证Token
-        record = service.database.get_record_by_token(token, 'reject')
+        record = service.database.get_approval_by_token(token)
         
         if not record:
             return templates.TemplateResponse(
@@ -301,15 +318,16 @@ async def reject_report(
                 }
             )
         
-        if record.is_expired():
-            return templates.TemplateResponse(
-                "approval_error.html",
-                {
-                    "request": request,
-                    "error": "链接已过期",
-                    "message": "该审批链接已超过有效期（30分钟）"
-                }
-            )
+        # 取消时间限制检查
+        # if record.is_expired():
+        #     return templates.TemplateResponse(
+        #         "approval_error.html",
+        #         {
+        #             "request": request,
+        #             "error": "链接已过期",
+        #             "message": "该审批链接已超过有效期"
+        #         }
+        #     )
         
         if record.status != 'pending':
             return templates.TemplateResponse(
@@ -321,6 +339,9 @@ async def reject_report(
                 }
             )
         
+        # 添加审批阶段信息
+        stage_text = f"第{record.current_stage}轮" if record.current_stage else ""
+        
         # 显示驳回确认页面（包含原因输入）
         return templates.TemplateResponse(
             "approval_reject_confirm.html",
@@ -329,6 +350,7 @@ async def reject_report(
                 "approval": record,
                 "action": "reject",
                 "action_text": "驳回",
+                "stage_text": stage_text,
                 "token": token
             }
         )
@@ -387,14 +409,16 @@ async def reject_report_with_reason(
         )
         
         if result['success']:
-            logger.info(f"报告审批驳回 - {result['report_id']}")
+            stage_text = f"第{result.get('stage', '')}轮" if result.get('stage') else ""
+            logger.info(f"报告{stage_text}审批驳回 - {result['report_id']}")
             return templates.TemplateResponse(
                 "approval_success.html",
                 {
                     "request": request,
                     "approval": result['record'],
                     "action": "驳回",
-                    "message": f"实验报告审批已驳回，原因：{reason}"
+                    "stage_text": stage_text,
+                    "message": f"{stage_text}审批已驳回，原因：{reason}"
                 }
             )
         else:
@@ -423,10 +447,7 @@ async def get_approval_status(
     request: Request,
     report_id: str
 ):
-    """
-    查询审批状态
-    供上位机查询使用
-    """
+    """查询审批状态"""
     try:
         # 验证内网访问
         if not validate_internal_ip(request):
@@ -455,7 +476,7 @@ async def get_approval_statistics(request: Request):
             raise HTTPException(status_code=403, detail="仅允许内网访问")
         
         service = get_approval_service()
-        stats = service.get_statistics()
+        stats = await service.get_approval_statistics()
         
         return {
             "success": True,
@@ -475,19 +496,43 @@ async def test_approval_system():
     try:
         service = get_approval_service()
         
+        # 测试数据库连接
+        db_status = service.database.test_connection()
+        
         return {
-            "status": "OPERATIONAL",
-            "service": "Experiment Approval System",
-            "version": "2.0.0",
+            "status": "OPERATIONAL" if db_status else "DATABASE_ERROR",
+            "service": "Two-Stage Experiment Approval System",
+            "version": "2.2.0 MySQL TwoStage Fixed",
+            "database": {
+                "type": "MySQL",
+                "host": service.database.config['host'],
+                "port": service.database.config['port'],
+                "database": service.database.config['database'],
+                "connection_status": "OK" if db_status else "FAILED"
+            },
+            "approval_stages": {
+                "first_stage": "第一轮审批 - 技术审核",
+                "second_stage": "第二轮审批 - 管理审批",
+                "auto_progression": "第一轮通过后自动启动第二轮"
+            },
+            "fixes_applied": [
+                "取消30分钟时间限制",
+                "修复数据库连接配置",
+                "优化两轮审批流程",
+                "修复邮件模板问题",
+                "改进错误处理机制"
+            ],
             "features": [
-                "实验报告PDF生成",
-                "邮件审批流程",
-                "局域网安全验证",
-                "一次性Token机制",
-                "审批记录追溯"
+                "两轮审批流程",
+                "自动邮件转发",
+                "reports表状态同步",
+                "MySQL数据库存储",
+                "审批记录追溯",
+                "操作日志记录",
+                "无时间限制审批链接"
             ],
             "endpoints": [
-                "/approval/submit_report - 提交审批请求",
+                "/approval/submit_report - 提交两轮审批请求",
                 "/approval/approve - 审批通过",
                 "/approval/reject - 审批驳回",
                 "/approval/status/{report_id} - 查询状态",
@@ -496,26 +541,30 @@ async def test_approval_system():
             ],
             "security": {
                 "internal_network_only": True,
-                "token_expiry_minutes": 30,
+                "token_expiry": "无限制（已取消30分钟限制）",
                 "one_time_use_tokens": True,
-                "ip_validation": True
+                "ip_validation": True,
+                "database_logging": True
             },
-            "database_status": "connected",
-            "pdf_generator_status": "ready",
-            "email_service_status": "ready"
+            "report_status_flow": [
+                "InReview -> (第一轮审批) -> InApproval -> (第二轮审批) -> Approved",
+                "InReview -> (第一轮驳回) -> ReviewRejected",
+                "InApproval -> (第二轮驳回) -> Rejected"
+            ],
+            "email_template": "approval_email_templates.html",
+            "time_limit_removed": True
         }
         
     except Exception as e:
         logger.error(f"审批系统测试失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"系统异常: {str(e)}")
 
-# API路由，供管理后台调用
 @router.get("/api/stats")
 async def get_approval_stats_api(request: Request):
     """获取审批系统统计信息（API接口）"""
     try:
         service = get_approval_service()
-        stats = service.get_statistics()
+        stats = await service.get_approval_statistics()
         
         return {
             "total_reports": stats["total_reports"],
@@ -524,7 +573,12 @@ async def get_approval_stats_api(request: Request):
             "rejected_reports": stats["rejected_reports"],
             "today_submissions": stats["today_submissions"],
             "avg_approval_time_minutes": stats["avg_approval_time_minutes"],
+            "stage_statistics": stats.get("stage_statistics", {}),
             "system_status": "OPERATIONAL",
+            "database_type": "MySQL",
+            "approval_type": "Two-Stage",
+            "time_limit_removed": True,
+            "version": "2.2.0-FIXED",
             "timestamp": datetime.now().isoformat()
         }
         

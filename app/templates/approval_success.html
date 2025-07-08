@@ -1,4 +1,4 @@
-<!-- app/templates/approval_success.html - 审批成功页面 -->
+<!-- app/templates/approval_success.html - 修复版审批成功页面 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -523,7 +523,7 @@
             </div>
             <div class="info-row">
                 <span class="info-label">处理时间</span>
-                <span class="info-value">{{ approval.processed_at.strftime('%Y年%m月%d日 %H:%M:%S') if approval.processed_at else '刚刚' }}</span>
+                <span class="info-value"><span id="currentProcessTime"></span></span>
             </div>
             {% if approval.reason %}
             <div class="info-row">
@@ -537,6 +537,14 @@
                 <span class="info-label">审批人</span>
                 <span class="info-value">{{ approval.approver_email }}</span>
             </div>
+            {% if stage_text %}
+            <div class="info-row">
+                <span class="info-label">审批阶段</span>
+                <span class="info-value">
+                    <span class="status-badge status-approved">{{ stage_text }}</span>
+                </span>
+            </div>
+            {% endif %}
         </div>
 
         <div class="security-info">
@@ -552,13 +560,27 @@
         <div class="footer">
             <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
             <p>审批操作已完成，相关人员将收到通知</p>
-            <p>操作时间：{{ approval.processed_at.strftime('%Y年%m月%d日 %H:%M:%S') if approval.processed_at else moment().format('YYYY年MM月DD日 HH:mm:ss') }}</p>
+            <p>操作时间：<span id="operationTime"></span></p>
             <p>如有疑问，请联系系统管理员</p>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 设置时间显示（修复版本）
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN');
+            
+            const currentProcessTimeEl = document.getElementById('currentProcessTime');
+            const operationTimeEl = document.getElementById('operationTime');
+            
+            if (currentProcessTimeEl) {
+                currentProcessTimeEl.textContent = timeStr;
+            }
+            if (operationTimeEl) {
+                operationTimeEl.textContent = timeStr;
+            }
+            
             // 创建庆祝动效
             createCelebration();
             

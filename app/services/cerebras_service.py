@@ -18,7 +18,7 @@ class CerebrasConfig(BaseModel):
     """Cerebras配置模型"""
     api_key: str = Field(..., description="Cerebras API密钥")
     base_url: str = Field(default="https://api.cerebras.ai/v1", description="API基础URL")
-    model: str = Field(default="llama3.1-8b", description="默认模型")
+    model: str = Field(default="llama-3.3-70b", description="默认模型")
     timeout: float = Field(default=30.0, description="请求超时时间")
     max_tokens: int = Field(default=2048, description="最大tokens")
     temperature: float = Field(default=0.1, description="温度参数")
@@ -55,7 +55,7 @@ class CerebrasService:
             self.config = CerebrasConfig(
                 api_key=api_key,
                 base_url=cerebras_config.get('api_url', 'https://api.cerebras.ai/v1'),
-                model=cerebras_config.get('model', 'qwen-3-32b'),
+                model=cerebras_config.get('model', 'llama-3.3-70b'),
                 timeout=cerebras_config.get('timeout', 30.0),
                 max_tokens=cerebras_config.get('max_tokens', 2048),
                 temperature=cerebras_config.get('temperature', 0.1)

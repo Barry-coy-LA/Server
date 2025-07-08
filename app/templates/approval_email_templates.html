@@ -215,7 +215,7 @@
         
         .security-badge {
             display: inline-block;
-            background: #dc3545;
+            background: #28a745;
             color: white;
             padding: 4px 8px;
             border-radius: 4px;
@@ -266,7 +266,7 @@
         <!-- 邮件头部 -->
         <div class="header">
             <h1>🔬 实验报告审批通知</h1>
-            <p>TianMu工业AGI试验台 · 实验审批系统</p>
+            <p>TianMu工业AGI试验台 · {{ stage_text }}审批</p>
         </div>
         
         <!-- 邮件内容 -->
@@ -275,7 +275,7 @@
                 尊敬的审批人员，您好！
             </div>
             
-            <p>一份实验报告需要您的审批，具体信息如下：</p>
+            <p>一份实验报告需要您的{{ stage_text }}审批，具体信息如下：</p>
             
             <!-- 报告信息 -->
             <div class="report-info">
@@ -297,16 +297,21 @@
                         <td class="info-value">{{ approver_email }}</td>
                     </tr>
                     <tr>
+                        <td class="info-label">🔄 审批阶段:</td>
+                        <td class="info-value">
+                            <span class="security-badge">{{ stage_text }}</span>
+                        </td>
+                    </tr>
+                    <tr>
                         <td class="info-label">⏰ 提交时间:</td>
                         <td class="info-value">
                             <span class="timestamp">{{ submit_time }}</span>
                         </td>
                     </tr>
                     <tr>
-                        <td class="info-label">⏳ 截止时间:</td>
+                        <td class="info-label">⏳ 链接状态:</td>
                         <td class="info-value">
-                            <span class="timestamp">{{ expire_time }}</span>
-                            <span class="security-badge">30分钟内有效</span>
+                            <span class="security-badge">永久有效</span>
                         </td>
                     </tr>
                 </table>
@@ -335,10 +340,11 @@
                     <ul>
                         <li><strong>本审批链接仅在公司局域网内有效</strong></li>
                         <li>链接具有唯一性，仅能使用一次</li>
-                        <li>链接有效期为30分钟，过期后将自动失效</li>
+                        <li><strong>链接无时间限制，可稍后处理</strong></li>
                         <li>请勿转发此邮件，链接仅限审批人本人使用</li>
                         <li>点击审批按钮前会有二次确认，请仔细核对</li>
                         <li>所有审批操作将记录IP地址和时间用于审计追溯</li>
+                        <li>{{ stage_text }}审批{{ "通过后将自动进入第二轮审批" if stage_text == "第一轮" else "通过后报告将被最终批准" }}</li>
                     </ul>
                 </div>
             </div>
@@ -368,7 +374,7 @@
             <p><strong>🏭 TianMu工业AGI试验台 · 实验审批系统</strong></p>
             <p>本邮件由系统自动发送，请勿回复</p>
             <p>如有技术问题，请联系系统管理员</p>
-            <p>服务器地址: {{ server_address }} | 系统版本: v2.1.0</p>
+            <p>服务器地址: {{ server_address }} | 系统版本: v2.2.0</p>
             <p style="margin-top: 10px; font-size: 10px; color: #999;">
                 邮件ID: {{ email_id }} | 发送时间: {{ send_timestamp }}
             </p>

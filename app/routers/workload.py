@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
+from datetime import datetime
 
 from app.services.workload_recognition_service import (
     get_workload_service, 
@@ -45,7 +46,7 @@ async def recognize_from_text(request: WorkloadTextRequest):
         service = get_workload_service()
         result = await service.recognize_from_text(request.text, request.language)
         
-        logger.info(f"[工况识别] 识别完成，测试类型: {result.test_type.value}, 阶段数: {result.total_stages}")
+        logger.info(f"[工况识别] 识别完成，测试类型: {result.test_type}, 阶段数: {result.total_phases}")
         return result
         
     except Exception as e:
@@ -62,7 +63,7 @@ async def recognize_from_ocr(request: WorkloadOCRRequest):
         service = get_workload_service()
         result = await service.recognize_from_ocr(request.ocr_parameters, request.language)
         
-        logger.info(f"[工况识别] OCR识别完成，测试类型: {result.test_type.value}, 阶段数: {result.total_stages}")
+        logger.info(f"[工况识别] OCR识别完成，测试类型: {result.test_type}, 阶段数: {result.total_phases}")
         return result
         
     except Exception as e:
@@ -71,7 +72,7 @@ async def recognize_from_ocr(request: WorkloadOCRRequest):
 
 @router.post("/switch-llm")
 async def switch_llm(request: LLMSwitchRequest):
-    """切换LLM提供商"""
+    """切换LLM提供商 - 修复版本"""
     logger.info(f"[工况识别] 切换LLM请求: {request.llm_provider}")
     
     try:
@@ -83,8 +84,9 @@ async def switch_llm(request: LLMSwitchRequest):
         else:
             raise ValueError(f"不支持的LLM提供商: {request.llm_provider}")
         
-        # 执行切换
-        switch_global_llm(new_provider)
+        # 获取服务实例并执行切换
+        service = get_workload_service()
+        await service.switch_llm(new_provider)
         
         logger.info(f"[工况识别] LLM切换完成: {new_provider.value}")
         
@@ -92,7 +94,7 @@ async def switch_llm(request: LLMSwitchRequest):
             "success": True,
             "message": f"LLM已切换到: {new_provider.value}",
             "current_llm": new_provider.value,
-            "timestamp": "2025-06-24T12:00:00"
+            "timestamp": datetime.now().isoformat()
         }
         
     except Exception as e:
@@ -119,6 +121,51 @@ async def get_supported_llms():
         ],
         "default": "qwen",
         "switch_endpoint": "/workload/switch-llm"
+    }
+
+@router.get("/json-structure")
+async def get_json_structure():
+    """获取新JSON结构规范"""
+    return {
+        "structure_version": "3.0",
+        "description": "压缩机测试流程JSON结构生成原则",
+        "main_fields": {
+            "test_type": "测试类型：耐久测试/性能测试",
+            "suction_pressure_tolerance": "吸气标准差",
+            "discharge_pressure_tolerance": "排气标准差", 
+            "ambient_temp": "环境温度",
+            "pressure_standard": "气压类型：绝对气压/表压",
+            "total_phases": "分解出来的阶段总数",
+            "phases": "阶段定义字典",
+            "flow": "执行流程树"
+        },
+        "phase_structure": {
+            "suction_pressure": "吸气压力(MPa)",
+            "discharge_pressure": "排气压力(MPa)",
+            "voltage": "电压(V)",
+            "superheat": "过热度",
+            "subcooling": "过冷度",
+            "initial_speed": "初始转速(rpm)",
+            "target_speed": "目标转速(rpm)",
+            "speed_duration": "转速持续时间(s)",
+            "initial_temp": "起始温度(°C)",
+            "target_temp": "目标温度(°C)",
+            "temp_change_rate": "温度变化率(°C/s)",
+            "temp_duration": "温度持续时间(s)"
+        },
+        "flow_node_types": {
+            "phase": {"type": "phase", "phase_id": "阶段ID"},
+            "sequence": {"type": "sequence", "children": "子节点数组"},
+            "loop": {"type": "loop", "count": "循环次数", "children": "子节点数组"}
+        },
+        "auto_calculation_rules": [
+            "若initial_temp ≠ target_temp，则temp_duration = abs(target - initial) / temp_change_rate",
+            "若initial_speed ≠ target_speed，则speed_duration = abs(target - initial) / speed_change_rate",
+            "所有温度单位统一为摄氏度（°C）",
+            "温度变化率单位为°C/s（不是°C/min）",
+            "默认压力单位为绝对压力MPa(A)",
+            "室温按照20°C计算"
+        ]
     }
 
 @router.get("/test-types")
@@ -158,10 +205,11 @@ async def get_service_status():
         return {
             **status,
             "endpoints": [
-                "/workload/recognize/text - 文本工况识别",
-                "/workload/recognize/ocr - OCR工况识别",
+                "/workload/recognize/text - 文本工况识别（新JSON结构）",
+                "/workload/recognize/ocr - OCR工况识别（新JSON结构）",
                 "/workload/switch-llm - 切换LLM提供商",
                 "/workload/supported-llms - 支持的LLM列表", 
+                "/workload/json-structure - JSON结构规范",
                 "/workload/test-types - 支持的测试类型",
                 "/workload/status - 服务状态",
                 "/workload/test - 服务测试"
@@ -203,13 +251,15 @@ async def test_workload_service():
             "test_status": "成功",
             "test_input": "标准耐久测试描述",
             "test_result": {
-                "test_type": result.test_type.value,
-                "total_stages": result.total_stages,
-                "stage_count": len(result.stages),
+                "test_type": result.test_type,
+                "total_phases": result.total_phases,
+                "phase_count": len(result.phases),
+                "flow_type": result.flow.type,
                 "has_validation_errors": len(result.validation_errors) > 0,
                 "processing_info": result.processing_info
             },
-            "message": "工况识别服务测试通过"
+            "json_structure": "新版本3.0结构",
+            "message": "工况识别服务测试通过（新JSON结构）"
         }
         
     except Exception as e:
